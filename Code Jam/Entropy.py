@@ -15,6 +15,49 @@ class UIElement:
         self.image = image
         self.rect = pygame.Rect(x,y,width,height)
 
+class BottomBar:
+    def __init__(self,x,y,width,height,image):
+        self.x = x
+        self.y = y
+
+        self.closed_y = y
+        self.open_y = y - height + 20
+        self.target_y = y
+
+        self.width = width
+        self.height = height
+
+        self.image = image
+
+        self.open = False
+
+        self.rect = pygame.Rect(x,y,width,height)
+
+        self.arrow_rect = pygame.Rect(
+            x + width//2 - 20,
+            y,
+            40,
+            20
+        )
+
+    def toggle(self):
+
+        self.open = not self.open
+
+        if(self.open):
+            self.target_y = self.open_y
+        else:
+            self.target_y = self.closed_y
+
+    def update(self):
+        if(self.y < self.target_y):
+            self.y += 10
+        elif(self.y > self.target_y):
+            self.y -= 10
+
+        self.rect.y = self.y
+        self.arrow_rect.y = self.y
+
 class Enemy(Tile):
     def __init__(self,x,y,image,enemy_type):
         super().__init__(x,y,image,"enemy")
@@ -66,27 +109,27 @@ stage_1_enemy_list = []
 
 
 #Background Tile Art Loading
-basic_grass_tile = pygame.image.load("basic_grass_tile.png").convert_alpha()
-grass_tile = pygame.image.load("grass_tile.png").convert_alpha()
-grass_2_tile = pygame.image.load("grass_2_tile.png").convert_alpha()
-grass_3_tile = pygame.image.load("grass_3_tile.png").convert_alpha()
-grass_4_tile = pygame.image.load("grass_4_tile.png").convert_alpha()
-grass_bush_tile = pygame.image.load("grass_bush_tile.png").convert_alpha()
+basic_grass_tile = pygame.image.load("Code Jam/basic_grass_tile.png").convert_alpha()
+grass_tile = pygame.image.load("Code Jam/grass_tile.png").convert_alpha()
+grass_2_tile = pygame.image.load("Code Jam/grass_2_tile.png").convert_alpha()
+grass_3_tile = pygame.image.load("Code Jam/grass_3_tile.png").convert_alpha()
+grass_4_tile = pygame.image.load("Code Jam/grass_4_tile.png").convert_alpha()
+grass_bush_tile = pygame.image.load("Code Jam/grass_bush_tile.png").convert_alpha()
 
 #Track Tile Art Loading
-dirt_path_track = pygame.image.load("dirt_path.png").convert_alpha()
+dirt_path_track = pygame.image.load("Code Jam/dirt_path.png").convert_alpha()
 
 #UI Element Art Loading
 #Start stage
-start_button = pygame.image.load("start_button.png").convert_alpha()
-quit_button = pygame.image.load("quit_button.png").convert_alpha()
-entropy_name_plate = pygame.image.load("entropy_name_plate.png").convert_alpha()
+start_button = pygame.image.load("Code Jam/start_button.png").convert_alpha()
+quit_button = pygame.image.load("Code Jam/quit_button.png").convert_alpha()
+entropy_name_plate = pygame.image.load("Code Jam/entropy_name_plate.png").convert_alpha()
 
 #Stage menu and UI
-
+bottom_bar_image = pygame.image.load("Code Jam/bottom_bar.png").convert_alpha()
 
 #Enemy Art Loading
-basic_plant_enemy = pygame.image.load("basic_plant_enemy.png").convert_alpha()
+basic_plant_enemy = pygame.image.load("Code Jam/basic_plant_enemy.png").convert_alpha()
 
 
 #Tower Art Loading
@@ -146,17 +189,18 @@ while track_tile_x < screen.get_width():
 game_start_button = UIElement(screen.get_width()//2-560//2,screen.get_height()//3,560,200,start_button,"start_button")
 game_quit_button = UIElement(screen.get_width()//2-560//2,screen.get_height()//1.5,560,200,quit_button,"quit_button")
 game_entropy_name_plate = UIElement(screen.get_width()//2-560//2,screen.get_height()//24,560,200,entropy_name_plate,"entropy_name_plate")
-
+game_bottom_bar = BottomBar(
+    screen.get_width()//2 - bottom_bar_image.get_width()//2,
+    screen.get_height()-20,
+    bottom_bar_image.get_width(),
+    bottom_bar_image.get_height(),
+    bottom_bar_image
+)
 
 
 #random test region
 plantoid = Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant")
 stage_1_enemy_list.append(plantoid)
-
-
-
-
-
 
 #Game Loop
 while game_is_on:
@@ -172,6 +216,14 @@ while game_is_on:
                     start_stage = False
                 if(game_quit_button.rect.collidepoint(pygame.mouse.get_pos())):
                     game_is_on = False
+            if(stage_1):
+                if(game_bottom_bar.arrow_rect.collidepoint(pygame.mouse.get_pos())):
+                    game_bottom_bar.toggle()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                if(stage_1):
+                    game_bottom_bar.toggle()
+
     
 
     #drawing the background
@@ -188,11 +240,20 @@ while game_is_on:
     if(stage_1):
         for tile in track_tiles:
             screen.blit(tile.image,(tile.tile_coordinates))
+
         if(frame % 15 == 0):
             for enemy in stage_1_enemy_list:
                 enemy.move_down_track()
+
         for enemy in stage_1_enemy_list:
             screen.blit(enemy.image,(enemy.tile_coordinates))
+
+        game_bottom_bar.update()
+
+        screen.blit(
+            game_bottom_bar.image,
+            (game_bottom_bar.x,game_bottom_bar.y)
+        )
 
     pygame.display.flip()
     frame += 1
