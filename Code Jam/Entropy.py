@@ -118,7 +118,7 @@ class Enemy(Tile):
 
 class Tower(Tile):
     def __init__(self,x,y,image,tower_type):
-        super().__init__(x,y,image,"enemy")
+        super().__init__(x,y,image,"tower")
         self.tower_type = tower_type
 
 class Player:
@@ -140,6 +140,10 @@ start_stage = True
 stage_1 = False
 stage_2 = False
 stage_3 = False
+
+placed_towers = []
+placing_tower = False
+selected_tower = None
 
 #Stage Enemies and Waves
 stage_1_wave_counter = 0
@@ -262,7 +266,12 @@ upgrade_panel = SlidingPanel(
     upgrade_panel_image,
     "horizontal"
 )
-
+wizard_tower_rect = pygame.Rect(
+    0,
+    0,
+    small_wizard_tower.get_width(),
+    small_wizard_tower.get_height()
+)
 
 #random test region
 
@@ -284,6 +293,14 @@ while game_is_on:
             if(stage_1):
                 if(game_bottom_bar.arrow_rect.collidepoint(pygame.mouse.get_pos())):
                     game_bottom_bar.toggle()
+            if(game_bottom_bar.open):
+                if(wizard_tower_rect.collidepoint(pygame.mouse.get_pos())):
+                    selected_tower = Tower(
+                        0,
+                        0,
+                        small_wizard_tower,
+                        "small_wizard"
+                    )
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if(stage_1):
@@ -318,7 +335,21 @@ while game_is_on:
         if(len(stage_1_enemy_list) == 0):
             stage_1_wave_spawning = True
             stage_1_wave_counter += 1
-        
+
+        if(selected_tower != None):
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+
+            grid_x = (mouse_x // tile_scaler) * tile_scaler
+            grid_y = (mouse_y // tile_scaler) * tile_scaler
+
+            selected_tower.tile_coordinates.x = grid_x
+            selected_tower.tile_coordinates.y = grid_y
+
+            screen.blit(
+                selected_tower.image,
+                selected_tower.tile_coordinates
+            )
+            
         screen.blit(heart,(20,20))
         screen.blit(font.render(f"{player.health}",True,(255,255,255)),(70,20))
 
@@ -337,6 +368,9 @@ while game_is_on:
             (game_bottom_bar.x,game_bottom_bar.y)
         )
         if(game_bottom_bar.open):
+            wizard_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2
+            wizard_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
+
             screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
         
         upgrade_panel.update()
