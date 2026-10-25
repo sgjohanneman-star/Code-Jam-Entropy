@@ -194,7 +194,7 @@ small_wizard_tower = pygame.image.load("Code Jam/small_wizard_tower.png").conver
 
 #Heart and Star Flowers
 heart = pygame.transform.scale(pygame.image.load("Code Jam/heart.png").convert_alpha(),(40,40))
-star_flower = pygame.image.load("Code Jam/star_flower.png").convert_alpha()
+star_flower = pygame.transform.scale(pygame.image.load("Code Jam/star_flower.png").convert_alpha(),(50,50))
 
 
 # Tile Creation - Expect 64x36
@@ -295,13 +295,14 @@ while game_is_on:
                     game_bottom_bar.toggle()
             if(game_bottom_bar.open):
                 if(wizard_tower_rect.collidepoint(pygame.mouse.get_pos())):
-                    if(selected_tower == None):
+                    if(selected_tower == None and player.currency >= 100):
                         selected_tower = Tower(
                             0,
                             0,
                             small_wizard_tower,
                             "small_wizard"
                         )
+                        player.currency -= 100
                 elif(selected_tower != None):
                     valid = True
                     for tile in track_tiles:
@@ -364,7 +365,8 @@ while game_is_on:
             
         screen.blit(heart,(20,20))
         screen.blit(font.render(f"{player.health}",True,(255,255,255)),(70,20))
-
+        screen.blit(star_flower,(100,15))
+        screen.blit(font.render(f"{player.currency}",True,(255,255,255)),(150,20))
 
         if(frame % 15 == 0):
             for enemy in stage_1_enemy_list:
