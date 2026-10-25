@@ -283,7 +283,7 @@ for column in range(0,screen.get_width(),tile_scaler):
             background_tiles.append(Tile(column,row,basic_grass_tile,"basic_grass_tile"))
 
 #Stage 1 Tile Creation
-track_tiles = []
+stage_1_track_tiles = []
 waypoint_tiles = []
 track_height = (screen.get_height()//2)
 track_tile_x = 0
@@ -294,20 +294,27 @@ while track_tile_x < screen.get_width():
         track_option = random.randint(1,10)
     if(track_option == 1 and prior_track_option != 2):
         track_height += tile_scaler
-        if(waypoint_tiles[-1].tile_coordinates != track_tiles[-1].tile_coordinates):
-            waypoint_tiles.append(track_tiles[-1])
+        if(waypoint_tiles[-1].tile_coordinates != stage_1_track_tiles[-1].tile_coordinates):
+            waypoint_tiles.append(stage_1_track_tiles[-1])
         track_tile_x -= tile_scaler
     if(track_option == 2 and prior_track_option != 1):
         track_height -= tile_scaler
-        if(waypoint_tiles[-1].tile_coordinates != track_tiles[-1].tile_coordinates):
-            waypoint_tiles.append(track_tiles[-1])
+        if(waypoint_tiles[-1].tile_coordinates != stage_1_track_tiles[-1].tile_coordinates):
+            waypoint_tiles.append(stage_1_track_tiles[-1])
         track_tile_x -= tile_scaler
     prior_track_option = track_option
     track_tile = Tile(track_tile_x,track_height,dirt_path_track,"dirt_path_track")
-    track_tiles.append(track_tile)
+    stage_1_track_tiles.append(track_tile)
     track_tile_x += tile_scaler
     if track_tile_x == 0 or track_option <= 2 or track_tile_x == screen.get_width():
         waypoint_tiles.append(track_tile)
+#Stage 2 Tile Creation
+
+
+
+#Stage 3 Tile Creation
+
+
 
 #UI Elements
 game_start_button = UIElement(screen.get_width()//2-560//2,screen.get_height()//3,560,200,start_button,"start_button")
@@ -381,7 +388,7 @@ while game_is_on:
                         )
                 elif(selected_tower != None):
                     valid = True
-                    for tile in track_tiles:
+                    for tile in stage_1_track_tiles:
                         if tile.rect.colliderect(selected_tower.rect):
                             valid = False
                     if(valid and player.currency >= 100):
@@ -422,7 +429,7 @@ while game_is_on:
 
     #Stage Drawing
     if(stage_1):
-        for tile in track_tiles:
+        for tile in stage_1_track_tiles:
             screen.blit(tile.image,(tile.tile_coordinates))
 
         if(stage_1_wave_spawning):
@@ -434,8 +441,16 @@ while game_is_on:
                         stage_1_spawn_taken = True
         if(len(stage_1_enemy_list) == 0):
             stage_1_wave_spawning = True
-            stage_1_wave_counter += 1
-            player.currency += 25
+            if(len(stage_1_waves) > stage_1_wave_counter):
+                stage_1_wave_counter += 1
+                player.currency += 25
+            else:
+                stage_1_complete = True
+                stage_1 = False
+                select_screen = True
+                player.health = 50
+                player.currency = 250
+                projectile_list = []
 
         if(selected_tower != None):
             mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -499,8 +514,9 @@ while game_is_on:
         if(game_bottom_bar.open):
             wizard_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2
             wizard_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
-
             screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
+            screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
+            screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
         
         upgrade_panel.update()
 
@@ -511,4 +527,3 @@ while game_is_on:
     pygame.display.flip()
     frame += 1
     clock.tick(60)
-
