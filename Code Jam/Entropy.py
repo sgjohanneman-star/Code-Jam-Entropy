@@ -303,8 +303,13 @@ while game_is_on:
                             "small_wizard"
                         )
                 elif(selected_tower != None):
-                    placed_towers.append(selected_tower)
-                    selected_tower = None
+                    valid = True
+                    for tile in track_tiles:
+                        if tile.rect.colliderect(selected_tower.rect):
+                            valid = False
+                    if(valid):
+                        placed_towers.append(selected_tower)
+                        selected_tower = None
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if(stage_1):
@@ -348,6 +353,9 @@ while game_is_on:
 
             selected_tower.tile_coordinates.x = grid_x
             selected_tower.tile_coordinates.y = grid_y
+            selected_tower.rect.x = grid_x
+            selected_tower.rect.y = grid_y
+
 
             screen.blit(
                 selected_tower.image,
