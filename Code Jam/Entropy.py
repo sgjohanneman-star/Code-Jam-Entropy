@@ -295,12 +295,16 @@ while game_is_on:
                     game_bottom_bar.toggle()
             if(game_bottom_bar.open):
                 if(wizard_tower_rect.collidepoint(pygame.mouse.get_pos())):
-                    selected_tower = Tower(
-                        0,
-                        0,
-                        small_wizard_tower,
-                        "small_wizard"
-                    )
+                    if(selected_tower == None):
+                        selected_tower = Tower(
+                            0,
+                            0,
+                            small_wizard_tower,
+                            "small_wizard"
+                        )
+                elif(selected_tower != None):
+                    placed_towers.append(selected_tower)
+                    selected_tower = None
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if(stage_1):
@@ -361,6 +365,11 @@ while game_is_on:
 
         for enemy in stage_1_enemy_list:
             screen.blit(enemy.image,(enemy.tile_coordinates))
+        for tower in placed_towers:
+            screen.blit(
+                tower.image,
+                tower.tile_coordinates
+            )
 
         game_bottom_bar.update()
         screen.blit(
