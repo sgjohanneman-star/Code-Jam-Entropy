@@ -15,48 +15,81 @@ class UIElement:
         self.image = image
         self.rect = pygame.Rect(x,y,width,height)
 
-class BottomBar:
-    def __init__(self,x,y,width,height,image):
+class SlidingPanel:
+    def __init__(self,x,y,width,height,image,direction):
         self.x = x
         self.y = y
-
-        self.closed_y = y
-        self.open_y = y - height + 20
-        self.target_y = y
 
         self.width = width
         self.height = height
 
         self.image = image
+        self.direction = direction
 
         self.open = False
 
         self.rect = pygame.Rect(x,y,width,height)
 
-        self.arrow_rect = pygame.Rect(
-            x + width//2 - 20,
-            y,
-            40,
-            20
-        )
+        if(direction == "vertical"):
+            self.closed_y = y
+            self.open_y = y - height + 20
+            self.target_y = y
+
+            self.arrow_rect = pygame.Rect(
+                x + width//2 - 20,
+                y,
+                40,
+                20
+            )
+
+        elif(direction == "horizontal"):
+            self.closed_x = x
+            self.open_x = x - width + 20
+            self.target_x = x
+
+            self.arrow_rect = pygame.Rect(
+                x,
+                y + height//2 - 20,
+                20,
+                40
+            )
 
     def toggle(self):
-
         self.open = not self.open
 
-        if(self.open):
-            self.target_y = self.open_y
-        else:
-            self.target_y = self.closed_y
+        if(self.direction == "vertical"):
+            if(self.open):
+                self.target_y = self.open_y
+            else:
+                self.target_y = self.closed_y
+
+        elif(self.direction == "horizontal"):
+            if(self.open):
+                self.target_x = self.open_x
+            else:
+                self.target_x = self.closed_x
 
     def update(self):
-        if(self.y < self.target_y):
-            self.y += 10
-        elif(self.y > self.target_y):
-            self.y -= 10
 
-        self.rect.y = self.y
-        self.arrow_rect.y = self.y
+        if(self.direction == "vertical"):
+
+            if(self.y < self.target_y):
+                self.y += 10
+            elif(self.y > self.target_y):
+                self.y -= 10
+
+            self.rect.y = self.y
+            self.arrow_rect.y = self.y
+
+        elif(self.direction == "horizontal"):
+
+            if(self.x < self.target_x):
+                self.x += 10
+            elif(self.x > self.target_x):
+                self.x -= 10
+
+            self.rect.x = self.x
+            self.arrow_rect.x = self.x
 
 class Enemy(Tile):
     def __init__(self,x,y,image,enemy_type):
@@ -146,6 +179,7 @@ entropy_name_plate = pygame.image.load("Code Jam/entropy_name_plate.png").conver
 
 #Stage menu and UI
 bottom_bar_image = pygame.image.load("Code Jam/bottom_bar.png").convert_alpha()
+upgrade_panel_image = pygame.image.load("Code Jam/upgrade_panel.png").convert_alpha()
 
 #Enemy Art Loading
 basic_plant_enemy = pygame.image.load("Code Jam/basic_plant_enemy.png").convert_alpha()
@@ -212,12 +246,21 @@ while track_tile_x < screen.get_width():
 game_start_button = UIElement(screen.get_width()//2-560//2,screen.get_height()//3,560,200,start_button,"start_button")
 game_quit_button = UIElement(screen.get_width()//2-560//2,screen.get_height()//1.5,560,200,quit_button,"quit_button")
 game_entropy_name_plate = UIElement(screen.get_width()//2-560//2,screen.get_height()//24,560,200,entropy_name_plate,"entropy_name_plate")
-game_bottom_bar = BottomBar(
+game_bottom_bar = SlidingPanel(
     screen.get_width()//2 - bottom_bar_image.get_width()//2,
     screen.get_height()-20,
     bottom_bar_image.get_width(),
     bottom_bar_image.get_height(),
-    bottom_bar_image
+    bottom_bar_image,
+    "vertical"
+)
+upgrade_panel = SlidingPanel(
+    screen.get_width()-20,
+    screen.get_height()//2-upgrade_panel_image.get_height()//2,
+    upgrade_panel_image.get_width(),
+    upgrade_panel_image.get_height(),
+    upgrade_panel_image,
+    "horizontal"
 )
 
 
@@ -241,10 +284,14 @@ while game_is_on:
             if(stage_1):
                 if(game_bottom_bar.arrow_rect.collidepoint(pygame.mouse.get_pos())):
                     game_bottom_bar.toggle()
+                    upgrade_panel.toggle()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if(stage_1):
                     game_bottom_bar.toggle()
+            if event.key == pygame.K_u:
+                if(stage_1):
+                    upgrade_panel.toggle()
 
     
 
@@ -286,15 +333,19 @@ while game_is_on:
             screen.blit(enemy.image,(enemy.tile_coordinates))
 
         game_bottom_bar.update()
-        
-
         screen.blit(
             game_bottom_bar.image,
             (game_bottom_bar.x,game_bottom_bar.y)
         )
         if(game_bottom_bar.open):
             screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
+        
+        upgrade_panel.update()
 
+        screen.blit(
+            upgrade_panel.image,
+            (upgrade_panel.x,upgrade_panel.y)
+        )
     pygame.display.flip()
     frame += 1
     clock.tick(60)
