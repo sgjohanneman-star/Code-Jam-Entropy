@@ -65,16 +65,21 @@ class Enemy(Tile):
         self.way_point_number = 0
     def move_down_track(self):
         if(self.way_point_number + 1 == len(waypoint_tiles)):
-            self.damage()
+            self.damage(player)
             return
         move_vector = pygame.Vector2(((self.tile_coordinates.x - waypoint_tiles[self.way_point_number+1].tile_coordinates.x),(self.tile_coordinates.y-waypoint_tiles[self.way_point_number+1].tile_coordinates.y))).normalize() * tile_scaler
         self.tile_coordinates.x -= move_vector.x
         self.tile_coordinates.y -= move_vector.y
         if(self.tile_coordinates.x == waypoint_tiles[self.way_point_number+1].tile_coordinates.x and self.tile_coordinates.y == waypoint_tiles[self.way_point_number+1].tile_coordinates.y):
             self.way_point_number += 1
-    def damage(self):
-        #deal damage
-        #delete from list
+    def damage(self,player):
+        player.health -= 1
+        if(stage_1):
+            stage_1_enemy_list.remove(self)
+        if(stage_2):
+            stage_2_enemy_list.remove(self)
+        if(stage_3):
+            stage_3_enemy_list.remove(self)
         return
         
 
@@ -95,6 +100,7 @@ clock = pygame.time.Clock()
 game_is_on = True
 frame = 0
 player = Player(50,150)
+font = pygame.font.SysFont("helvetica", 32)
 
 #Stage Variables
 start_stage = True
@@ -104,9 +110,22 @@ stage_3 = False
 
 #Stage Enemies and Waves
 stage_1_wave_counter = 0
-stage_1_waves = [["basic_plant"],["basic_plant"]]
+stage_1_wave_spawning = True
+stage_1_spawn_taken = False
+stage_1_waves = [["basic_plant" for i in range(10)],["basic_plant"]]
 stage_1_enemy_list = []
 
+stage_2_wave_counter = 0
+stage_2_wave_spawning = True
+stage_2_spawn_taken = False
+stage_2_waves = [["basic_plant" for i in range(10)],["basic_plant"]]
+stage_2_enemy_list = []
+
+stage_3_wave_counter = 0
+stage_3_wave_spawning = True
+stage_3_spawn_taken = False
+stage_3_waves = [["basic_plant" for i in range(10)],["basic_plant"]]
+stage_3_enemy_list = []
 
 #Background Tile Art Loading
 basic_grass_tile = pygame.image.load("Code Jam/basic_grass_tile.png").convert_alpha()
@@ -133,7 +152,11 @@ basic_plant_enemy = pygame.image.load("Code Jam/basic_plant_enemy.png").convert_
 
 
 #Tower Art Loading
+small_wizard_tower = pygame.image.load("Code Jam/small_wizard_tower.png").convert_alpha()
 
+#Heart and Star Flowers
+heart = pygame.transform.scale(pygame.image.load("Code Jam/heart.png").convert_alpha(),(40,40))
+star_flower = pygame.image.load("Code Jam/star_flower.png").convert_alpha()
 
 
 # Tile Creation - Expect 64x36
@@ -199,8 +222,7 @@ game_bottom_bar = BottomBar(
 
 
 #random test region
-plantoid = Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant")
-stage_1_enemy_list.append(plantoid)
+
 
 #Game Loop
 while game_is_on:
@@ -241,19 +263,37 @@ while game_is_on:
         for tile in track_tiles:
             screen.blit(tile.image,(tile.tile_coordinates))
 
+        if(stage_1_wave_spawning):
+            for enemy in stage_1_waves[stage_1_wave_counter]:
+                if not(stage_1_spawn_taken):
+                    stage_1_enemy_list.append(Enemy(0,screen.get_height()//2,basic_plant_enemy,enemy))
+                    stage_1_waves[stage_1_wave_counter].remove(enemy)
+                    stage_1_spawn_taken = True
+        if(len(stage_1_enemy_list) == 0):
+            stage_1_wave_spawning = True
+            stage_1_wave_counter += 1
+        
+        screen.blit(heart,(20,20))
+        screen.blit(font.render(f"{player.health}",True,(255,255,255)),(70,20))
+
+
         if(frame % 15 == 0):
             for enemy in stage_1_enemy_list:
                 enemy.move_down_track()
+                stage_1_spawn_taken = False
 
         for enemy in stage_1_enemy_list:
             screen.blit(enemy.image,(enemy.tile_coordinates))
 
         game_bottom_bar.update()
+        
 
         screen.blit(
             game_bottom_bar.image,
             (game_bottom_bar.x,game_bottom_bar.y)
         )
+        if(game_bottom_bar.open):
+            screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
 
     pygame.display.flip()
     frame += 1
