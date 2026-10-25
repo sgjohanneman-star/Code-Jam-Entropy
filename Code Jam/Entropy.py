@@ -111,15 +111,27 @@ class Enemy(Tile):
         self.tile_coordinates.y -= move_vector.y
         if(self.tile_coordinates.x == waypoint_tiles[self.way_point_number+1].tile_coordinates.x and self.tile_coordinates.y == waypoint_tiles[self.way_point_number+1].tile_coordinates.y):
             self.way_point_number += 1
+        self.rect = pygame.Rect(self.tile_coordinates.x,self.tile_coordinates.y,40,40)
     def damage(self,player):
-        player.health -= 1
+        player.health -= self.health
         if(stage_1):
             stage_1_enemy_list.remove(self)
+            self.health = -1
         if(stage_2):
             stage_2_enemy_list.remove(self)
+            self.health = -1
         if(stage_3):
             stage_3_enemy_list.remove(self)
-        return
+            self.health = -1
+    def take_damage(self,amount):
+        self.health -= amount
+        if(self.health <= 0):
+            if(stage_1):
+                stage_1_enemy_list.remove(self)
+            if(stage_2):
+                stage_2_enemy_list.remove(self)
+            if(stage_3):
+                stage_3_enemy_list.remove(self)
         
 
 class Tower(Tile):
@@ -127,12 +139,38 @@ class Tower(Tile):
         super().__init__(x,y,image,"tower")
         self.tower_type = tower_type
     def attack(self,target:Enemy):
-        pass
+        if(self.tower_type == "small_wizard_tower"):
+            projectile_list.append(Projectile(self.tile_coordinates.x,self.tile_coordinates.y,wizard_projectile,"wizard",target))
+        if(self.tower_type == "small_mage_tower"):
+            projectile_list.append(Projectile(self.tile_coordinates.x,self.tile_coordinates.y,None,"mage",target))
 
 class Player:
     def __init__(self,health,currency):
         self.health = health
         self.currency = currency
+
+class Projectile:
+    def __init__(self,x,y,image,projectile_type,target):
+        self.pos = pygame.Vector2(x,y)
+        self.projectile_type = projectile_type
+        self.image = image
+        self.target = target
+        self.projectile_stage = 0
+        self.velocity = None
+    def advance_projectile_stage(self):
+        if(self.projectile_type == "wizard"):
+            self.projectile_stage += 1
+            self.velocity = (self.pos-self.target.tile_coordinates).normalize()*15
+            self.pos -= self.velocity
+            self.collision_check()
+
+    def collision_check(self):
+        if(self.target.rect.collidepoint((self.pos.x+20,self.pos.y+20)) and self.projectile_type == "wizard" and self.target.health > 0):
+            projectile_list.remove(self)
+            self.target.take_damage(1)
+            player.currency += 1
+        elif(self.target.health <= 0):
+            projectile_list.remove(self)
 
 #Setup
 pygame.init()
@@ -170,10 +208,14 @@ upgrade_panel_image = pygame.image.load("Code Jam/upgrade_panel.png").convert_al
 
 #Enemy Art Loading
 basic_plant_enemy = pygame.image.load("Code Jam/basic_plant_enemy.png").convert_alpha()
-
+basic_tree_enemy = pygame.image.load("Code Jam/basic_tree_enemy.png").convert_alpha()
+basic_fly_enemy = pygame.image.load("Code Jam/basic_fly_enemy.png").convert_alpha()
 
 #Tower Art Loading
 small_wizard_tower = pygame.image.load("Code Jam/small_wizard_tower.png").convert_alpha()
+
+#Projectile Art Loading
+wizard_projectile = pygame.image.load("Code Jam/wizard_projectile.png").convert_alpha()
 
 #Heart and Star Flowers
 heart = pygame.transform.scale(pygame.image.load("Code Jam/heart.png").convert_alpha(),(40,40))
@@ -194,12 +236,15 @@ placed_towers = []
 placing_tower = False
 selected_tower = None
 
+projectile_list = []
+
 #Stage Enemies and Waves
 stage_1_wave_counter = 0
 stage_1_wave_spawning = True
 stage_1_spawn_taken = False
-stage_1_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)],[]]
+stage_1_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)],[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)],[Enemy(0,screen.get_height()//2,basic_tree_enemy,"basic_tree_enemy") for i in range(5)],[Enemy(0,screen.get_height()//2,basic_fly_enemy,"basic_fly_enemy") for i in range(5)]]
 stage_1_enemy_list = []
+
 
 stage_2_wave_counter = 0
 stage_2_wave_spawning = True
@@ -332,7 +377,7 @@ while game_is_on:
                             0,
                             0,
                             small_wizard_tower,
-                            "small_wizard"
+                            "small_wizard_tower"
                         )
                 elif(selected_tower != None):
                     valid = True
@@ -381,14 +426,16 @@ while game_is_on:
             screen.blit(tile.image,(tile.tile_coordinates))
 
         if(stage_1_wave_spawning):
-            for enemy in stage_1_waves[stage_1_wave_counter]:
-                if not(stage_1_spawn_taken):
-                    stage_1_enemy_list.append(enemy)
-                    stage_1_waves[stage_1_wave_counter].remove(enemy)
-                    stage_1_spawn_taken = True
+            if(len(stage_1_waves) > stage_1_wave_counter):
+                for enemy in stage_1_waves[stage_1_wave_counter]:
+                    if not(stage_1_spawn_taken):
+                        stage_1_enemy_list.append(enemy)
+                        stage_1_waves[stage_1_wave_counter].remove(enemy)
+                        stage_1_spawn_taken = True
         if(len(stage_1_enemy_list) == 0):
             stage_1_wave_spawning = True
             stage_1_wave_counter += 1
+            player.currency += 25
 
         if(selected_tower != None):
             mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -436,6 +483,13 @@ while game_is_on:
                 tower.image,
                 tower.tile_coordinates
             )
+            if(frame % 60 == 0 and tower.tower_type == "small_wizard_tower" and len(stage_1_enemy_list) > 0):
+                tower.attack(stage_1_enemy_list[0])
+
+        for projectile in projectile_list:
+            if(frame % 3 == 0):
+                projectile.advance_projectile_stage()
+            screen.blit(projectile.image,projectile.pos)
 
         game_bottom_bar.update()
         screen.blit(
@@ -458,4 +512,3 @@ while game_is_on:
     frame += 1
     clock.tick(60)
 
-    
