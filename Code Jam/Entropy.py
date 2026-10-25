@@ -284,7 +284,6 @@ while game_is_on:
             if(stage_1):
                 if(game_bottom_bar.arrow_rect.collidepoint(pygame.mouse.get_pos())):
                     game_bottom_bar.toggle()
-                    upgrade_panel.toggle()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if(stage_1):
