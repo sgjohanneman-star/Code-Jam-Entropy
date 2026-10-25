@@ -137,9 +137,14 @@ font = pygame.font.SysFont("helvetica", 32)
 
 #Stage Variables
 start_stage = True
+select_screen = False
 stage_1 = False
 stage_2 = False
 stage_3 = False
+
+stage_1_complete = False
+stage_2_complete = False
+stage_3_complete = False
 
 placed_towers = []
 placing_tower = False
@@ -180,6 +185,10 @@ dirt_path_track = pygame.image.load("Code Jam/dirt_path.png").convert_alpha()
 start_button = pygame.image.load("Code Jam/start_button.png").convert_alpha()
 quit_button = pygame.image.load("Code Jam/quit_button.png").convert_alpha()
 entropy_name_plate = pygame.image.load("Code Jam/entropy_name_plate.png").convert_alpha()
+#Select_screen
+select_1 = pygame.image.load("Code Jam/select_1.png").convert_alpha()
+select_2 = pygame.image.load("Code Jam/select_2.png").convert_alpha()
+select_3 = pygame.image.load("Code Jam/select_3.png").convert_alpha()
 
 #Stage menu and UI
 bottom_bar_image = pygame.image.load("Code Jam/bottom_bar.png").convert_alpha()
@@ -250,6 +259,10 @@ while track_tile_x < screen.get_width():
 game_start_button = UIElement(screen.get_width()//2-560//2,screen.get_height()//3,560,200,start_button,"start_button")
 game_quit_button = UIElement(screen.get_width()//2-560//2,screen.get_height()//1.5,560,200,quit_button,"quit_button")
 game_entropy_name_plate = UIElement(screen.get_width()//2-560//2,screen.get_height()//24,560,200,entropy_name_plate,"entropy_name_plate")
+game_select_1 = UIElement(screen.get_width()//2-400,screen.get_height()//2-100,200,200,select_1,"select_1")
+game_select_2 = UIElement(screen.get_width()//2-100,screen.get_height()//2-100,200,200,select_2,"select_2")
+game_select_3 = UIElement(screen.get_width()//2+200,screen.get_height()//2-100,200,200,select_3,"select_3")
+
 game_bottom_bar = SlidingPanel(
     screen.get_width()//2 - bottom_bar_image.get_width()//2,
     screen.get_height()-20,
@@ -286,16 +299,26 @@ while game_is_on:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if(start_stage):
                 if(game_start_button.rect.collidepoint(pygame.mouse.get_pos())):
-                    stage_1 = True
+                    select_screen = True
                     start_stage = False
                 if(game_quit_button.rect.collidepoint(pygame.mouse.get_pos())):
                     game_is_on = False
+            if select_screen:
+                if(game_select_1.rect.collidepoint(pygame.mouse.get_pos())):
+                    select_screen = False
+                    stage_1 = True
+                if(game_select_2.rect.collidepoint(pygame.mouse.get_pos()) and stage_1_complete):
+                    select_screen = False
+                    stage_2 = True
+                if(game_select_3.rect.collidepoint(pygame.mouse.get_pos()) and stage_2_complete):
+                    select_screen = False
+                    stage_3 = True
             if(stage_1):
                 if(game_bottom_bar.arrow_rect.collidepoint(pygame.mouse.get_pos())):
                     game_bottom_bar.toggle()
             if(game_bottom_bar.open):
                 if(wizard_tower_rect.collidepoint(pygame.mouse.get_pos())):
-                    if(selected_tower == None):
+                    if(selected_tower == None and player.currency >= 100):
                         selected_tower = Tower(
                             0,
                             0,
@@ -330,6 +353,12 @@ while game_is_on:
         screen.blit(game_start_button.image,(game_start_button.ui_coordinates))
         screen.blit(game_quit_button.image,(game_quit_button.ui_coordinates))
         screen.blit(game_entropy_name_plate.image,(game_entropy_name_plate.ui_coordinates))
+
+    if select_screen:
+        screen.blit(game_select_1.image,(game_select_1.ui_coordinates))
+        screen.blit(game_select_2.image,(game_select_2.ui_coordinates))
+        screen.blit(game_select_3.image,(game_select_3.ui_coordinates))
+
 
     #Stage Drawing
     if(stage_1):
@@ -368,7 +397,7 @@ while game_is_on:
         screen.blit(star_flower,(100,15))
         screen.blit(font.render(f"{player.currency}",True,(255,255,255)),(150,20))
 
-        if(frame % 15 == 0):
+        if(frame % 20 == 0):
             for enemy in stage_1_enemy_list:
                 enemy.move_down_track()
                 stage_1_spawn_taken = False
