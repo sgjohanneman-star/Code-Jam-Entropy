@@ -96,6 +96,12 @@ class Enemy(Tile):
         super().__init__(x,y,image,"enemy")
         self.enemy_type = enemy_type
         self.way_point_number = 0
+        if(self.enemy_type == "basic_plant_enemy"):
+            self.health = 2
+        if(self.enemy_type == "basic_tree_enemy"):
+            self.health = 5
+        if(self.enemy_type == "basic_fly_enemy"):
+            self.health = 1
     def move_down_track(self):
         if(self.way_point_number + 1 == len(waypoint_tiles)):
             self.damage(player)
@@ -120,6 +126,8 @@ class Tower(Tile):
     def __init__(self,x,y,image,tower_type):
         super().__init__(x,y,image,"tower")
         self.tower_type = tower_type
+    def attack(self,target:Enemy):
+        pass
 
 class Player:
     def __init__(self,health,currency):
@@ -132,42 +140,8 @@ screen = pygame.display.set_mode((1280,720))
 clock = pygame.time.Clock()
 game_is_on = True
 frame = 0
-player = Player(50,150)
+player = Player(health=50,currency=150)
 font = pygame.font.SysFont("helvetica", 32)
-
-#Stage Variables
-start_stage = True
-select_screen = False
-stage_1 = False
-stage_2 = False
-stage_3 = False
-
-stage_1_complete = False
-stage_2_complete = False
-stage_3_complete = False
-
-placed_towers = []
-placing_tower = False
-selected_tower = None
-
-#Stage Enemies and Waves
-stage_1_wave_counter = 0
-stage_1_wave_spawning = True
-stage_1_spawn_taken = False
-stage_1_waves = [["basic_plant" for i in range(10)],["basic_plant"]]
-stage_1_enemy_list = []
-
-stage_2_wave_counter = 0
-stage_2_wave_spawning = True
-stage_2_spawn_taken = False
-stage_2_waves = [["basic_plant" for i in range(10)],["basic_plant"]]
-stage_2_enemy_list = []
-
-stage_3_wave_counter = 0
-stage_3_wave_spawning = True
-stage_3_spawn_taken = False
-stage_3_waves = [["basic_plant" for i in range(10)],["basic_plant"]]
-stage_3_enemy_list = []
 
 #Background Tile Art Loading
 basic_grass_tile = pygame.image.load("Code Jam/basic_grass_tile.png").convert_alpha()
@@ -204,6 +178,41 @@ small_wizard_tower = pygame.image.load("Code Jam/small_wizard_tower.png").conver
 #Heart and Star Flowers
 heart = pygame.transform.scale(pygame.image.load("Code Jam/heart.png").convert_alpha(),(40,40))
 star_flower = pygame.transform.scale(pygame.image.load("Code Jam/star_flower.png").convert_alpha(),(50,50))
+
+#Stage Variables
+start_stage = True
+select_screen = False
+stage_1 = False
+stage_2 = False
+stage_3 = False
+
+stage_1_complete = False
+stage_2_complete = False
+stage_3_complete = False
+
+placed_towers = []
+placing_tower = False
+selected_tower = None
+
+#Stage Enemies and Waves
+stage_1_wave_counter = 0
+stage_1_wave_spawning = True
+stage_1_spawn_taken = False
+stage_1_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)],[]]
+stage_1_enemy_list = []
+
+stage_2_wave_counter = 0
+stage_2_wave_spawning = True
+stage_2_spawn_taken = False
+stage_2_waves = []
+stage_2_enemy_list = []
+
+stage_3_wave_counter = 0
+stage_3_wave_spawning = True
+stage_3_spawn_taken = False
+stage_3_waves = []
+stage_3_enemy_list = []
+
 
 
 # Tile Creation - Expect 64x36
@@ -356,8 +365,14 @@ while game_is_on:
 
     if select_screen:
         screen.blit(game_select_1.image,(game_select_1.ui_coordinates))
-        screen.blit(game_select_2.image,(game_select_2.ui_coordinates))
-        screen.blit(game_select_3.image,(game_select_3.ui_coordinates))
+        if not(stage_1_complete):
+            screen.blit(pygame.transform.grayscale(game_select_2.image),(game_select_2.ui_coordinates))
+        else:
+            screen.blit((game_select_2.image),(game_select_2.ui_coordinates))
+        if not(stage_2_complete):
+            screen.blit(pygame.transform.grayscale(game_select_3.image),(game_select_3.ui_coordinates))
+        else:
+            screen.blit(game_select_3.image,(game_select_3.ui_coordinates))
 
 
     #Stage Drawing
@@ -368,7 +383,7 @@ while game_is_on:
         if(stage_1_wave_spawning):
             for enemy in stage_1_waves[stage_1_wave_counter]:
                 if not(stage_1_spawn_taken):
-                    stage_1_enemy_list.append(Enemy(0,screen.get_height()//2,basic_plant_enemy,enemy))
+                    stage_1_enemy_list.append(enemy)
                     stage_1_waves[stage_1_wave_counter].remove(enemy)
                     stage_1_spawn_taken = True
         if(len(stage_1_enemy_list) == 0):
@@ -399,8 +414,20 @@ while game_is_on:
 
         if(frame % 20 == 0):
             for enemy in stage_1_enemy_list:
-                enemy.move_down_track()
-                stage_1_spawn_taken = False
+                if(enemy.enemy_type == "basic_plant_enemy"):
+                    enemy.move_down_track()
+                    
+        if(frame % 30 == 0):
+            for enemy in stage_1_enemy_list:
+                if(enemy.enemy_type == "basic_tree_enemy"):
+                    enemy.move_down_track()
+        if(frame % 15 == 0):
+            for enemy in stage_1_enemy_list:
+                if(enemy.enemy_type == "basic_fly_enemy"):
+                    enemy.move_down_track()
+        
+        if(all(stage_1_enemy_list[i].tile_coordinates.x > 0 for i in range(0,len(stage_1_enemy_list)))):
+            stage_1_spawn_taken = False
 
         for enemy in stage_1_enemy_list:
             screen.blit(enemy.image,(enemy.tile_coordinates))
@@ -430,3 +457,5 @@ while game_is_on:
     pygame.display.flip()
     frame += 1
     clock.tick(60)
+
+    
