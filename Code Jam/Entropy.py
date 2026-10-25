@@ -295,22 +295,22 @@ while game_is_on:
                     game_bottom_bar.toggle()
             if(game_bottom_bar.open):
                 if(wizard_tower_rect.collidepoint(pygame.mouse.get_pos())):
-                    if(selected_tower == None and player.currency >= 100):
+                    if(selected_tower == None):
                         selected_tower = Tower(
                             0,
                             0,
                             small_wizard_tower,
                             "small_wizard"
                         )
-                        player.currency -= 100
                 elif(selected_tower != None):
                     valid = True
                     for tile in track_tiles:
                         if tile.rect.colliderect(selected_tower.rect):
                             valid = False
-                    if(valid):
+                    if(valid and player.currency >= 100):
                         placed_towers.append(selected_tower)
                         selected_tower = None
+                        player.currency -= 100
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if(stage_1):
