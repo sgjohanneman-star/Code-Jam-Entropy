@@ -357,19 +357,27 @@ stage_2_waypoint_tiles_2.append(track_tile)
 stage_1_wave_counter = 0
 stage_1_wave_spawning = True
 stage_1_spawn_taken = False
-stage_1_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy",waypoint_tiles) for i in range(5)],[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy",waypoint_tiles) for i in range(5)],[Enemy(0,screen.get_height()//2,basic_tree_enemy,"basic_tree_enemy",waypoint_tiles) for i in range(5)],[Enemy(0,screen.get_height()//2,basic_fly_enemy,"basic_fly_enemy",waypoint_tiles) for i in range(5)]]
+stage_1_wave_template = [
+    ["basic_plant_enemy" for i in range(5)],
+    ["basic_plant_enemy" for i in range(5)],
+    ["basic_tree_enemy" for i in range(5)],
+    ["basic_fly_enemy" for i in range(5)]
+]
 stage_1_enemy_list = []
 
 
 stage_2_wave_counter = 0
 stage_2_wave_spawning = True
 stage_2_spawn_taken = False
-stage_2_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy",stage_2_waypoint_tiles_1) if random.randint(0,1) == 1 else Enemy(screen.get_width()//2,screen.get_height()-tile_scaler,basic_plant_enemy,"basic_plant_enemy",stage_2_waypoint_tiles_2) for i in range(5)]]
+stage_2_wave_template = [
+    ["basic_plant_enemy" for i in range(5)]
+]
 stage_2_enemy_list = []
 
 stage_3_wave_counter = 0
 stage_3_wave_spawning = True
 stage_3_spawn_taken = False
+stage_3_wave_template = []
 stage_3_waves = []
 stage_3_enemy_list = []
 
@@ -424,16 +432,29 @@ while game_is_on:
                     start_stage = False
                 if(game_quit_button.rect.collidepoint(pygame.mouse.get_pos())):
                     game_is_on = False
-            if select_screen:
+            elif select_screen:
                 if(game_select_1.rect.collidepoint(pygame.mouse.get_pos())):
                     select_screen = False
                     stage_1 = True
+
+                    stage_1_waves = [
+                        wave.copy()
+                        for wave in stage_1_wave_template
+                    ]
                 if(game_select_2.rect.collidepoint(pygame.mouse.get_pos()) and stage_1_complete):
                     select_screen = False
                     stage_2 = True
+                    stage_2_waves = [
+                        wave.copy()
+                        for wave in stage_2_wave_template
+                    ]
                 if(game_select_3.rect.collidepoint(pygame.mouse.get_pos()) and stage_2_complete):
                     select_screen = False
                     stage_3 = True
+                    stage_3_waves = [
+                        wave.copy()
+                        for wave in stage_3_wave_template
+                    ]
             if(stage_1 or stage_2 or stage_3):
                 if(game_bottom_bar.arrow_rect.collidepoint(pygame.mouse.get_pos())):
                     game_bottom_bar.toggle()
@@ -447,8 +468,13 @@ while game_is_on:
                             "small_wizard_tower"
                         )
                 elif(selected_tower != None):
+                    track_check_list = []
+                    if(stage_1):
+                        track_check_list = stage_1_track_tiles
+                    elif(stage_2):
+                        track_check_list = stage_2_track_tiles_1 + stage_2_track_tiles_2
                     valid = True
-                    for tile in stage_1_track_tiles:
+                    for tile in track_check_list:
                         if tile.rect.colliderect(selected_tower.rect):
                             valid = False
                     if(valid and player.currency >= 100):
@@ -496,7 +522,38 @@ while game_is_on:
             if(len(stage_1_waves) > stage_1_wave_counter):
                 for enemy in stage_1_waves[stage_1_wave_counter]:
                     if not(stage_1_spawn_taken):
-                        stage_1_enemy_list.append(enemy)
+                        if enemy == "basic_plant_enemy":
+                            stage_1_enemy_list.append(
+                                Enemy(
+                                    0,
+                                    screen.get_height()//2,
+                                    basic_plant_enemy,
+                                    "basic_plant_enemy",
+                                    waypoint_tiles
+                                )
+                            )
+
+                        if enemy == "basic_tree_enemy":
+                            stage_1_enemy_list.append(
+                                Enemy(
+                                    0,
+                                    screen.get_height()//2,
+                                    basic_tree_enemy,
+                                    "basic_tree_enemy",
+                                    waypoint_tiles
+                                )
+                            )
+
+                        if enemy == "basic_fly_enemy":
+                            stage_1_enemy_list.append(
+                                Enemy(
+                                    0,
+                                    screen.get_height()//2,
+                                    basic_fly_enemy,
+                                    "basic_fly_enemy",
+                                    waypoint_tiles
+                                )
+                            )
                         stage_1_waves[stage_1_wave_counter].remove(enemy)
                         stage_1_spawn_taken = True
         if(len(stage_1_enemy_list) == 0):
@@ -508,9 +565,15 @@ while game_is_on:
                 stage_1_complete = True
                 stage_1 = False
                 select_screen = True
+                stage_1_wave_spawning = False
+                stage_1_enemy_list.clear()
+                placed_towers.clear()
+                selected_tower = None
                 player.health = 50
                 player.currency = 250
-                projectile_list = []
+                stage_1_wave_counter = 0
+                stage_1_spawn_taken = False
+                projectile_list.clear()
 
         if(selected_tower != None):
             mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -595,7 +658,27 @@ while game_is_on:
                 if(len(stage_2_waves) > stage_2_wave_counter):
                     for enemy in stage_2_waves[stage_2_wave_counter]:
                         if not(stage_2_spawn_taken):
-                            stage_2_enemy_list.append(enemy)
+                            if enemy == "basic_plant_enemy":
+                                if random.randint(0,1) == 1:
+                                    stage_2_enemy_list.append(
+                                        Enemy(
+                                            0,
+                                            screen.get_height()//2,
+                                            basic_plant_enemy,
+                                            "basic_plant_enemy",
+                                            stage_2_waypoint_tiles_1
+                                        )
+                                    )
+                                else:
+                                    stage_2_enemy_list.append(
+                                        Enemy(
+                                            screen.get_width()//2,
+                                            screen.get_height()-tile_scaler,
+                                            basic_plant_enemy,
+                                            "basic_plant_enemy",
+                                            stage_2_waypoint_tiles_2
+                                        )
+                                    )
                             stage_2_waves[stage_2_wave_counter].remove(enemy)
                             stage_2_spawn_taken = True
             if(len(stage_2_enemy_list) == 0):
@@ -609,7 +692,12 @@ while game_is_on:
                     select_screen = True
                     player.health = 50
                     player.currency = 250
-                    projectile_list = []
+                    stage_2_wave_counter = 0
+                    stage_2_spawn_taken = False
+                    stage_2_wave_spawning = False
+                    placed_towers.clear()
+                    selected_tower = None
+                    projectile_list.clear()
     
             if(selected_tower != None):
                 mouse_x, mouse_y = pygame.mouse.get_pos()
