@@ -109,6 +109,9 @@ class Enemy(Tile):
             return
         while((self.tile_coordinates.x - self.waypoint_track[self.way_point_number+1].tile_coordinates.x) == 0 and (self.tile_coordinates.y-self.waypoint_track[self.way_point_number+1].tile_coordinates.y) == 0):
             self.way_point_number += 1
+            if(self.way_point_number + 1 == len(self.waypoint_track)):
+                self.damage(player)
+                return
         move_vector = pygame.Vector2(((self.tile_coordinates.x - self.waypoint_track[self.way_point_number+1].tile_coordinates.x),(self.tile_coordinates.y-self.waypoint_track[self.way_point_number+1].tile_coordinates.y))).normalize() * tile_scaler
         self.tile_coordinates.x -= move_vector.x
         self.tile_coordinates.y -= move_vector.y
@@ -145,7 +148,7 @@ class Tower(Tile):
         if(self.tower_type == "small_wizard_tower"):
             projectile_list.append(Projectile(self.tile_coordinates.x,self.tile_coordinates.y,wizard_projectile,"wizard",target))
         if(self.tower_type == "small_mage_tower"):
-            projectile_list.append(Projectile(self.tile_coordinates.x,self.tile_coordinates.y,None,"mage",target))
+            projectile_list.append(Projectile(self.tile_coordinates.x,self.tile_coordinates.y,mage_projectile,"mage",target))
 
 class Player:
     def __init__(self,health,currency):
@@ -166,6 +169,31 @@ class Projectile:
             self.velocity = (self.pos-self.target.tile_coordinates).normalize()*15
             self.pos -= self.velocity
             self.collision_check()
+        elif(self.projectile_type == "mage"):
+            if self.velocity is None:
+                self.velocity = (self.pos-self.target.tile_coordinates)//4
+            self.pos -= self.velocity
+            self.projectile_stage += 1
+            if(self.projectile_stage == 4):
+                if(stage_1):
+                    for enemy in stage_1_enemy_list:
+                        if(enemy.rect.colliderect(pygame.Rect(self.pos.x-100,self.pos.y-100,240,240))):
+                            enemy.take_damage(4)
+                if(stage_2):
+                    for enemy in stage_2_enemy_list:
+                        if(enemy.rect.colliderect(pygame.Rect(self.pos.x-100,self.pos.y-100,240,240))):
+                            enemy.take_damage(4)
+                if(stage_3):
+                    for enemy in stage_3_enemy_list:
+                        if(enemy.rect.colliderect(pygame.Rect(self.pos.x-100,self.pos.y-100,240,240))):
+                            enemy.take_damage(4)
+                projectile_list.remove(self)
+                explosion = Projectile(self.pos.x - 100, self.pos.y - 100, mage_explosion,"mage_explosion",None)
+                projectile_list.append(explosion)
+        elif(self.projectile_type == "mage_explosion"):
+            self.projectile_stage += 1
+            if self.projectile_stage == 5:
+                projectile_list.remove(self)
 
     def collision_check(self):
         if(self.target.rect.collidepoint((self.pos.x+20,self.pos.y+20)) and self.projectile_type == "wizard" and self.target.health > 0):
@@ -181,7 +209,7 @@ screen = pygame.display.set_mode((1280,720))
 clock = pygame.time.Clock()
 game_is_on = True
 frame = 0
-player = Player(health=50,currency=150)
+player = Player(health=50,currency=350)
 font = pygame.font.SysFont("helvetica", 32)
 
 #Background Tile Art Loading
@@ -216,9 +244,12 @@ basic_fly_enemy = pygame.image.load("Code Jam/basic_fly_enemy.png").convert_alph
 
 #Tower Art Loading
 small_wizard_tower = pygame.image.load("Code Jam/small_wizard_tower.png").convert_alpha()
+small_mage_tower = pygame.image.load("Code Jam/small_mage_tower.png").convert_alpha()
 
 #Projectile Art Loading
 wizard_projectile = pygame.image.load("Code Jam/wizard_projectile.png").convert_alpha()
+mage_projectile = pygame.image.load("Code Jam/mage_projectile.png").convert_alpha()
+mage_explosion = pygame.image.load("Code Jam/mage_explosion.png").convert_alpha()
 
 #Heart and Star Flowers
 heart = pygame.transform.scale(pygame.image.load("Code Jam/heart.png").convert_alpha(),(40,40))
@@ -231,7 +262,7 @@ stage_1 = False
 stage_2 = False
 stage_3 = False
 
-stage_1_complete = True
+stage_1_complete = False
 stage_2_complete = False
 stage_3_complete = False
 
@@ -352,7 +383,14 @@ stage_1_wave_template = [
     ["basic_plant_enemy" for i in range(5)],
     ["basic_tree_enemy" for i in range(5)],
     ["basic_fly_enemy" for i in range(5)],
-    ["basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_fly_enemy","basic_fly_enemy"]
+    ["basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_fly_enemy","basic_fly_enemy"],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_fly_enemy"],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_fly_enemy"],
+    ["basic_fly_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_tree_enemy"],
+    ["basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy"],
+    ["basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy"],
+    ["basic_fly_enemy" for i in range(20)],
+    ["basic_tree_enemy"] #Consider adding stage 1 boss, like mastuh pumpking
 ]
 stage_1_enemy_list = []
 
@@ -400,6 +438,12 @@ upgrade_panel = SlidingPanel(
     "horizontal"
 )
 wizard_tower_rect = pygame.Rect(
+    0,
+    0,
+    small_wizard_tower.get_width(),
+    small_wizard_tower.get_height()
+)
+mage_tower_rect = pygame.Rect(
     0,
     0,
     small_wizard_tower.get_width(),
@@ -458,6 +502,14 @@ while game_is_on:
                             small_wizard_tower,
                             "small_wizard_tower"
                         )
+                if(mage_tower_rect.collidepoint(pygame.mouse.get_pos())):
+                    if(selected_tower == None and player.currency >= 200):
+                        selected_tower = Tower(
+                            0,
+                            0,
+                            small_mage_tower,
+                            "small_mage_tower"
+                        )
                 elif(selected_tower != None):
                     track_check_list = []
                     if(stage_1):
@@ -468,10 +520,14 @@ while game_is_on:
                     for tile in track_check_list:
                         if tile.rect.colliderect(selected_tower.rect):
                             valid = False
-                    if(valid and player.currency >= 100):
+                    if(valid and selected_tower.tower_type == "small_wizard_tower" and player.currency >= 100):
                         placed_towers.append(selected_tower)
                         selected_tower = None
                         player.currency -= 100
+                    elif(valid and selected_tower.tower_type == "small_mage_tower" and player.currency >= 200):
+                        placed_towers.append(selected_tower)
+                        selected_tower = None
+                        player.currency -= 200
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if(stage_1 or stage_2 or stage_3):
@@ -551,7 +607,7 @@ while game_is_on:
             stage_1_wave_spawning = True
             if(len(stage_1_waves) > stage_1_wave_counter):
                 stage_1_wave_counter += 1
-                player.currency += 25
+                player.currency += 25 + (stage_1_wave_counter//5)*25
             else:
                 stage_1_complete = True
                 stage_1 = False
@@ -614,9 +670,15 @@ while game_is_on:
             )
             if(frame % 60 == 0 and tower.tower_type == "small_wizard_tower" and len(stage_1_enemy_list) > 0):
                 tower.attack(stage_1_enemy_list[0])
+            if(frame % 260 == 0 and tower.tower_type == "small_mage_tower" and len(stage_1_enemy_list) > 0):
+                tower.attack(stage_1_enemy_list[0])
 
         for projectile in projectile_list:
-            if(frame % 3 == 0):
+            if(frame % 3 == 0 and projectile.projectile_type == "wizard"):
+                projectile.advance_projectile_stage()
+            elif(frame % 6 == 0 and projectile.projectile_type == "mage"):
+                projectile.advance_projectile_stage()
+            elif(frame % 10 == 0 and projectile.projectile_type == "mage_explosion"):
                 projectile.advance_projectile_stage()
             screen.blit(projectile.image,projectile.pos)
 
@@ -631,6 +693,12 @@ while game_is_on:
             screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
             screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
             screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
+
+            mage_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4
+            mage_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
+            screen.blit(small_mage_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2))
+            screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*5.5,game_bottom_bar.y+game_bottom_bar.height//2+35))
+            screen.blit(font.render("200",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2+43))
         
         upgrade_panel.update()
 
@@ -738,10 +806,17 @@ while game_is_on:
                 )
                 if(frame % 60 == 0 and tower.tower_type == "small_wizard_tower" and len(stage_2_enemy_list) > 0):
                     tower.attack(stage_2_enemy_list[0])
+                if(frame % 260 == 0 and tower.tower_type == "small_mage_tower" and len(stage_2_enemy_list) > 0):
+                    tower.attack(stage_2_enemy_list[0])
     
             for projectile in projectile_list:
-                if(frame % 3 == 0):
+                if(frame % 3 == 0 and projectile.projectile_type == "wizard"):
                     projectile.advance_projectile_stage()
+                elif(frame % 6 == 0 and projectile.projectile_type == "mage"):
+                    projectile.advance_projectile_stage()
+                elif(frame % 10 == 0 and projectile.projectile_type == "mage_explosion"):
+                    projectile.advance_projectile_stage()
+                
                 screen.blit(projectile.image,projectile.pos)
     
             game_bottom_bar.update()
@@ -755,6 +830,12 @@ while game_is_on:
                 screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
                 screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
                 screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
+
+                mage_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4
+                mage_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
+                screen.blit(small_mage_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2))
+                screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*5.5,game_bottom_bar.y+game_bottom_bar.height//2+35))
+                screen.blit(font.render("200",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2+43))
             
             upgrade_panel.update()
     
