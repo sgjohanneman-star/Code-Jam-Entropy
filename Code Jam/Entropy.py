@@ -302,11 +302,17 @@ while stage_2_track_tiles_1[-1].tile_coordinates.x < screen.get_width():
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
             stage_2_waypoint_tiles_1.append(stage_2_track_tiles_1[-1])
+            if(prior_track_option == 1 or prior_track_option == 2):
+                if(len(stage_2_waypoint_tiles_1) >= 2):
+                    stage_2_waypoint_tiles_1.remove(stage_2_waypoint_tiles_1[-2])
     elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
         track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x,stage_2_track_tiles_1[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
             stage_2_waypoint_tiles_1.append(stage_2_track_tiles_1[-1])
+            if(prior_track_option == 3 or prior_track_option == 4):
+                if(len(stage_2_waypoint_tiles_1) >= 2):
+                    stage_2_waypoint_tiles_1.remove(stage_2_waypoint_tiles_1[-2])
     else:
         track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x + tile_scaler,stage_2_track_tiles_1[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = 0
@@ -323,11 +329,17 @@ while stage_2_track_tiles_2[-1].tile_coordinates.y > 0:
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
             stage_2_waypoint_tiles_2.append(stage_2_waypoint_tiles_2[-1])
+            if(prior_track_option == 1 or prior_track_option == 2):
+                if(len(stage_2_waypoint_tiles_2) >= 2):
+                    stage_2_waypoint_tiles_2.remove(stage_2_waypoint_tiles_2[-2])
     elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x - tile_scaler,stage_2_track_tiles_2[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
             stage_2_waypoint_tiles_2.append(stage_2_waypoint_tiles_2[-1])
+            if(prior_track_option == 3 or prior_track_option == 4):
+                if(len(stage_2_waypoint_tiles_2) >= 2):
+                    stage_2_waypoint_tiles_2.remove(stage_2_waypoint_tiles_2[-2])
     else:
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x,stage_2_track_tiles_2[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
         prior_track_option = 0
