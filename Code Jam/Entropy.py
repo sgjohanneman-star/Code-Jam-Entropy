@@ -371,7 +371,37 @@ while stage_2_track_tiles_2[-1].tile_coordinates.y > 0:
 stage_2_waypoint_tiles_2.append(track_tile)
 
 #Stage 3 Tile Creation
+stage_3_track_tiles_1 = []
+stage_3_track_tiles_2 = []
+stage_3_track_tiles_3 = []
+stage_3_waypoint_tiles_1 = []
+stage_3_waypoint_tiles_2 = []
+stage_3_waypoint_tiles_3 = []
 
+columns_selected = []
+
+while len(columns_selected < 3):
+    column_selected = random.randrange(0,screen.get_width(),tile_scaler)
+    if(column_selected in columns_selected):
+        pass
+    else:
+        columns_selected.append(column_selected)
+
+#First Column
+for y in range(0,screen.get_height(),tile_scaler):
+    stage_3_track_tiles_1.append(Tile(columns_selected[0],y,dirt_path_track,"dirt_path_track"))
+stage_3_waypoint_tiles_1.append(stage_3_track_tiles_1[0])
+stage_3_waypoint_tiles_1.append(stage_3_track_tiles_1[-1])
+#Second Column
+for y in range(0,screen.get_height(),tile_scaler):
+    stage_3_track_tiles_1.append(Tile(columns_selected[1],y,dirt_path_track,"dirt_path_track"))
+stage_3_waypoint_tiles_2.append(stage_3_track_tiles_2[0])
+stage_3_waypoint_tiles_2.append(stage_3_track_tiles_2[-1])
+#Third Column
+for y in range(0,screen.get_height(),tile_scaler):
+    stage_3_track_tiles_3.append(Tile(columns_selected[2],y,dirt_path_track,"dirt_path_track"))
+stage_3_waypoint_tiles_3.append(stage_3_track_tiles_3[0])
+stage_3_waypoint_tiles_3.append(stage_3_track_tiles_3[-1])
 
 
 #Stage Enemies and Waves
