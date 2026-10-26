@@ -92,7 +92,7 @@ class SlidingPanel:
             self.arrow_rect.x = self.x
 
 class Enemy(Tile):
-    def __init__(self,x,y,image,enemy_type):
+    def __init__(self,x,y,image,enemy_type,track):
         super().__init__(x,y,image,"enemy")
         self.enemy_type = enemy_type
         self.way_point_number = 0
@@ -102,14 +102,15 @@ class Enemy(Tile):
             self.health = 5
         if(self.enemy_type == "basic_fly_enemy"):
             self.health = 1
+        self.waypoint_track = track
     def move_down_track(self):
-        if(self.way_point_number + 1 == len(waypoint_tiles)):
+        if(self.way_point_number + 1 == len(self.waypoint_track)):
             self.damage(player)
             return
-        move_vector = pygame.Vector2(((self.tile_coordinates.x - waypoint_tiles[self.way_point_number+1].tile_coordinates.x),(self.tile_coordinates.y-waypoint_tiles[self.way_point_number+1].tile_coordinates.y))).normalize() * tile_scaler
+        move_vector = pygame.Vector2(((self.tile_coordinates.x - self.waypoint_track[self.way_point_number+1].tile_coordinates.x),(self.tile_coordinates.y-self.waypoint_track[self.way_point_number+1].tile_coordinates.y))).normalize() * tile_scaler
         self.tile_coordinates.x -= move_vector.x
         self.tile_coordinates.y -= move_vector.y
-        if(self.tile_coordinates.x == waypoint_tiles[self.way_point_number+1].tile_coordinates.x and self.tile_coordinates.y == waypoint_tiles[self.way_point_number+1].tile_coordinates.y):
+        if(self.tile_coordinates.x == self.waypoint_track[self.way_point_number+1].tile_coordinates.x and self.tile_coordinates.y == self.waypoint_track[self.way_point_number+1].tile_coordinates.y):
             self.way_point_number += 1
         self.rect = pygame.Rect(self.tile_coordinates.x,self.tile_coordinates.y,40,40)
     def damage(self,player):
@@ -238,28 +239,6 @@ selected_tower = None
 
 projectile_list = []
 
-#Stage Enemies and Waves
-stage_1_wave_counter = 0
-stage_1_wave_spawning = True
-stage_1_spawn_taken = False
-stage_1_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)],[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)],[Enemy(0,screen.get_height()//2,basic_tree_enemy,"basic_tree_enemy") for i in range(5)],[Enemy(0,screen.get_height()//2,basic_fly_enemy,"basic_fly_enemy") for i in range(5)]]
-stage_1_enemy_list = []
-
-
-stage_2_wave_counter = 0
-stage_2_wave_spawning = True
-stage_2_spawn_taken = False
-stage_2_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)]]
-stage_2_enemy_list = []
-
-stage_3_wave_counter = 0
-stage_3_wave_spawning = True
-stage_3_spawn_taken = False
-stage_3_waves = []
-stage_3_enemy_list = []
-
-
-
 # Tile Creation - Expect 64x36
 tile_scaler = 40
 background_tiles = []
@@ -281,6 +260,7 @@ for column in range(0,screen.get_width(),tile_scaler):
             background_tiles.append(Tile(column,row,grass_bush_tile,"grass_bush_tile"))
         else:
             background_tiles.append(Tile(column,row,basic_grass_tile,"basic_grass_tile"))
+
 
 #Stage 1 Tile Creation
 stage_1_track_tiles = []
@@ -321,16 +301,19 @@ while stage_2_track_tiles_1[-1].tile_coordinates.x < screen.get_width():
         track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x,stage_2_track_tiles_1[-1].tile_coordinates.y + tile_scaler,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
-            stage_2_waypoint_tiles_1.append(stage_1_track_tiles[-1])
+            stage_2_waypoint_tiles_1.append(stage_2_track_tiles_1[-1])
     elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
         track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x,stage_2_track_tiles_1[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
-            stage_2_waypoint_tiles_1.append(stage_1_track_tiles[-1])
+            stage_2_waypoint_tiles_1.append(stage_2_track_tiles_1[-1])
     else:
         track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x + tile_scaler,stage_2_track_tiles_1[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = 0
+    
     stage_2_track_tiles_1.append(track_tile)
+    if(track_option <= 4):
+            stage_2_waypoint_tiles_1.append(stage_2_track_tiles_1[-1])
 stage_2_waypoint_tiles_1.append(track_tile)
 
 while stage_2_track_tiles_2[-1].tile_coordinates.y > 0:
@@ -339,20 +322,45 @@ while stage_2_track_tiles_2[-1].tile_coordinates.y > 0:
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x + tile_scaler,stage_2_track_tiles_2[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
-            stage_2_waypoint_tiles_2.append(stage_1_track_tiles[-1])
+            stage_2_waypoint_tiles_2.append(stage_2_waypoint_tiles_2[-1])
     elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x - tile_scaler,stage_2_track_tiles_2[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
-            stage_2_waypoint_tiles_2.append(stage_1_track_tiles[-1])
+            stage_2_waypoint_tiles_2.append(stage_2_waypoint_tiles_2[-1])
     else:
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x,stage_2_track_tiles_2[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
         prior_track_option = 0
+    
     stage_2_track_tiles_2.append(track_tile)
+    if(track_option <= 4):
+        stage_2_waypoint_tiles_2.append(stage_2_track_tiles_2[-1])
 stage_2_waypoint_tiles_2.append(track_tile)
 
-
 #Stage 3 Tile Creation
+
+
+
+#Stage Enemies and Waves
+stage_1_wave_counter = 0
+stage_1_wave_spawning = True
+stage_1_spawn_taken = False
+stage_1_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy",waypoint_tiles) for i in range(5)],[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy",waypoint_tiles) for i in range(5)],[Enemy(0,screen.get_height()//2,basic_tree_enemy,"basic_tree_enemy",waypoint_tiles) for i in range(5)],[Enemy(0,screen.get_height()//2,basic_fly_enemy,"basic_fly_enemy",waypoint_tiles) for i in range(5)]]
+stage_1_enemy_list = []
+
+
+stage_2_wave_counter = 0
+stage_2_wave_spawning = True
+stage_2_spawn_taken = False
+stage_2_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy",stage_2_waypoint_tiles_1) if random.randint(0,1) == 1 else Enemy(screen.get_width()//2,screen.get_height()-tile_scaler,basic_plant_enemy,"basic_plant_enemy",stage_2_waypoint_tiles_2) for i in range(5)]]
+stage_2_enemy_list = []
+
+stage_3_wave_counter = 0
+stage_3_wave_spawning = True
+stage_3_spawn_taken = False
+stage_3_waves = []
+stage_3_enemy_list = []
+
 
 
 
@@ -414,7 +422,7 @@ while game_is_on:
                 if(game_select_3.rect.collidepoint(pygame.mouse.get_pos()) and stage_2_complete):
                     select_screen = False
                     stage_3 = True
-            if(stage_1):
+            if(stage_1 or stage_2 or stage_3):
                 if(game_bottom_bar.arrow_rect.collidepoint(pygame.mouse.get_pos())):
                     game_bottom_bar.toggle()
             if(game_bottom_bar.open):
@@ -437,10 +445,10 @@ while game_is_on:
                         player.currency -= 100
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                if(stage_1):
+                if(stage_1 or stage_2 or stage_3):
                     game_bottom_bar.toggle()
             if event.key == pygame.K_u:
-                if(stage_1):
+                if(stage_1 or stage_2 or stage_3):
                     upgrade_panel.toggle()
 
     
@@ -566,10 +574,103 @@ while game_is_on:
         )
 
     if(stage_2):
-        for tile in stage_2_track_tiles_1:
-            screen.blit(tile.image,(tile.tile_coordinates))
-        for tile in stage_2_track_tiles_2:
-            screen.blit(tile.image,(tile.tile_coordinates))
+            for tile in stage_2_track_tiles_1:
+                screen.blit(tile.image,(tile.tile_coordinates))
+            for tile in stage_2_track_tiles_2:
+                screen.blit(tile.image,(tile.tile_coordinates))
+    
+            if(stage_2_wave_spawning):
+                if(len(stage_2_waves) > stage_2_wave_counter):
+                    for enemy in stage_2_waves[stage_2_wave_counter]:
+                        if not(stage_2_spawn_taken):
+                            stage_2_enemy_list.append(enemy)
+                            stage_2_waves[stage_2_wave_counter].remove(enemy)
+                            stage_2_spawn_taken = True
+            if(len(stage_2_enemy_list) == 0):
+                stage_2_wave_spawning = True
+                if(len(stage_2_waves) > stage_2_wave_counter):
+                    stage_2_wave_counter += 1
+                    player.currency += 25
+                else:
+                    stage_2_complete = True
+                    stage_2 = False
+                    select_screen = True
+                    player.health = 50
+                    player.currency = 250
+                    projectile_list = []
+    
+            if(selected_tower != None):
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+    
+                grid_x = (mouse_x // tile_scaler) * tile_scaler
+                grid_y = (mouse_y // tile_scaler) * tile_scaler
+    
+                selected_tower.tile_coordinates.x = grid_x
+                selected_tower.tile_coordinates.y = grid_y
+                selected_tower.rect.x = grid_x
+                selected_tower.rect.y = grid_y
+    
+    
+                screen.blit(
+                    selected_tower.image,
+                    selected_tower.tile_coordinates
+                )
+                
+            screen.blit(heart,(20,20))
+            screen.blit(font.render(f"{player.health}",True,(255,255,255)),(70,20))
+            screen.blit(star_flower,(100,15))
+            screen.blit(font.render(f"{player.currency}",True,(255,255,255)),(150,20))
+    
+            if(frame % 20 == 0):
+                for enemy in stage_2_enemy_list:
+                    if(enemy.enemy_type == "basic_plant_enemy"):
+                        enemy.move_down_track()
+                        
+            if(frame % 30 == 0):
+                for enemy in stage_2_enemy_list:
+                    if(enemy.enemy_type == "basic_tree_enemy"):
+                        enemy.move_down_track()
+            if(frame % 15 == 0):
+                for enemy in stage_2_enemy_list:
+                    if(enemy.enemy_type == "basic_fly_enemy"):
+                        enemy.move_down_track()
+            
+            if(all(stage_2_enemy_list[i].tile_coordinates.x > 0 for i in range(0,len(stage_2_enemy_list)))):
+                stage_2_spawn_taken = False
+    
+            for enemy in stage_2_enemy_list:
+                screen.blit(enemy.image,(enemy.tile_coordinates))
+            for tower in placed_towers:
+                screen.blit(
+                    tower.image,
+                    tower.tile_coordinates
+                )
+                if(frame % 60 == 0 and tower.tower_type == "small_wizard_tower" and len(stage_2_enemy_list) > 0):
+                    tower.attack(stage_2_enemy_list[0])
+    
+            for projectile in projectile_list:
+                if(frame % 3 == 0):
+                    projectile.advance_projectile_stage()
+                screen.blit(projectile.image,projectile.pos)
+    
+            game_bottom_bar.update()
+            screen.blit(
+                game_bottom_bar.image,
+                (game_bottom_bar.x,game_bottom_bar.y)
+            )
+            if(game_bottom_bar.open):
+                wizard_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2
+                wizard_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
+                screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
+                screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
+                screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
+            
+            upgrade_panel.update()
+    
+            screen.blit(
+                upgrade_panel.image,
+                (upgrade_panel.x,upgrade_panel.y)
+            )
 
 
     pygame.display.flip()
