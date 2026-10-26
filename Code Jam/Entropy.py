@@ -228,7 +228,7 @@ stage_1 = False
 stage_2 = False
 stage_3 = False
 
-stage_1_complete = False
+stage_1_complete = True
 stage_2_complete = False
 stage_3_complete = False
 
@@ -249,7 +249,7 @@ stage_1_enemy_list = []
 stage_2_wave_counter = 0
 stage_2_wave_spawning = True
 stage_2_spawn_taken = False
-stage_2_waves = []
+stage_2_waves = [[Enemy(0,screen.get_height()//2,basic_plant_enemy,"basic_plant_enemy") for i in range(5)]]
 stage_2_enemy_list = []
 
 stage_3_wave_counter = 0
@@ -309,7 +309,47 @@ while track_tile_x < screen.get_width():
     if track_tile_x == 0 or track_option <= 2 or track_tile_x == screen.get_width():
         waypoint_tiles.append(track_tile)
 #Stage 2 Tile Creation
+stage_2_track_tiles_1 = [Tile(0,screen.get_height()//2,dirt_path_track,"dirt_path_track")]
+stage_2_track_tiles_2 = [Tile(screen.get_width()//2,screen.get_height()-tile_scaler,dirt_path_track,"dirt_path_track")]
+stage_2_waypoint_tiles_1 = [stage_2_track_tiles_1[-1]]
+stage_2_waypoint_tiles_2 = [stage_2_track_tiles_2[-1]]
+prior_track_option = 0
 
+while stage_2_track_tiles_1[-1].tile_coordinates.x < screen.get_width():
+    track_option = random.randint(1,10)
+    if((track_option == 1 or track_option == 2) and (prior_track_option != 3 and prior_track_option != 4)):
+        track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x,stage_2_track_tiles_1[-1].tile_coordinates.y + tile_scaler,dirt_path_track,"dirt_path_track")
+        prior_track_option = track_option
+        if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
+            stage_2_waypoint_tiles_1.append(stage_1_track_tiles[-1])
+    elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
+        track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x,stage_2_track_tiles_1[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
+        prior_track_option = track_option
+        if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
+            stage_2_waypoint_tiles_1.append(stage_1_track_tiles[-1])
+    else:
+        track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x + tile_scaler,stage_2_track_tiles_1[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
+        prior_track_option = 0
+    stage_2_track_tiles_1.append(track_tile)
+stage_2_waypoint_tiles_1.append(track_tile)
+
+while stage_2_track_tiles_2[-1].tile_coordinates.y > 0:
+    track_option = random.randint(1,10)
+    if((track_option == 1 or track_option == 2) and (prior_track_option != 3 and prior_track_option != 4)):
+        track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x + tile_scaler,stage_2_track_tiles_2[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
+        prior_track_option = track_option
+        if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
+            stage_2_waypoint_tiles_2.append(stage_1_track_tiles[-1])
+    elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
+        track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x - tile_scaler,stage_2_track_tiles_2[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
+        prior_track_option = track_option
+        if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
+            stage_2_waypoint_tiles_2.append(stage_1_track_tiles[-1])
+    else:
+        track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x,stage_2_track_tiles_2[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
+        prior_track_option = 0
+    stage_2_track_tiles_2.append(track_tile)
+stage_2_waypoint_tiles_2.append(track_tile)
 
 
 #Stage 3 Tile Creation
@@ -524,6 +564,14 @@ while game_is_on:
             upgrade_panel.image,
             (upgrade_panel.x,upgrade_panel.y)
         )
+
+    if(stage_2):
+        for tile in stage_2_track_tiles_1:
+            screen.blit(tile.image,(tile.tile_coordinates))
+        for tile in stage_2_track_tiles_2:
+            screen.blit(tile.image,(tile.tile_coordinates))
+
+
     pygame.display.flip()
     frame += 1
     clock.tick(60)
