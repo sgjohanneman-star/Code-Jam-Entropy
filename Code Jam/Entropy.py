@@ -107,6 +107,8 @@ class Enemy(Tile):
         if(self.way_point_number + 1 == len(self.waypoint_track)):
             self.damage(player)
             return
+        while((self.tile_coordinates.x - self.waypoint_track[self.way_point_number+1].tile_coordinates.x) == 0 and (self.tile_coordinates.y-self.waypoint_track[self.way_point_number+1].tile_coordinates.y) == 0):
+            self.way_point_number += 1
         move_vector = pygame.Vector2(((self.tile_coordinates.x - self.waypoint_track[self.way_point_number+1].tile_coordinates.x),(self.tile_coordinates.y-self.waypoint_track[self.way_point_number+1].tile_coordinates.y))).normalize() * tile_scaler
         self.tile_coordinates.x -= move_vector.x
         self.tile_coordinates.y -= move_vector.y
@@ -302,17 +304,11 @@ while stage_2_track_tiles_1[-1].tile_coordinates.x < screen.get_width():
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
             stage_2_waypoint_tiles_1.append(stage_2_track_tiles_1[-1])
-            if(prior_track_option == 1 or prior_track_option == 2):
-                if(len(stage_2_waypoint_tiles_1) >= 2):
-                    stage_2_waypoint_tiles_1.remove(stage_2_waypoint_tiles_1[-2])
     elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
         track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x,stage_2_track_tiles_1[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_1[-1].tile_coordinates != stage_2_track_tiles_1[-1].tile_coordinates):
             stage_2_waypoint_tiles_1.append(stage_2_track_tiles_1[-1])
-            if(prior_track_option == 3 or prior_track_option == 4):
-                if(len(stage_2_waypoint_tiles_1) >= 2):
-                    stage_2_waypoint_tiles_1.remove(stage_2_waypoint_tiles_1[-2])
     else:
         track_tile = Tile(stage_2_track_tiles_1[-1].tile_coordinates.x + tile_scaler,stage_2_track_tiles_1[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = 0
@@ -328,18 +324,12 @@ while stage_2_track_tiles_2[-1].tile_coordinates.y > 0:
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x + tile_scaler,stage_2_track_tiles_2[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
-            stage_2_waypoint_tiles_2.append(stage_2_waypoint_tiles_2[-1])
-            if(prior_track_option == 1 or prior_track_option == 2):
-                if(len(stage_2_waypoint_tiles_2) >= 2):
-                    stage_2_waypoint_tiles_2.remove(stage_2_waypoint_tiles_2[-2])
+            stage_2_waypoint_tiles_2.append(stage_2_track_tiles_2[-1])
     elif((track_option == 3 or track_option == 4) and (prior_track_option != 1 and prior_track_option != 2)):
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x - tile_scaler,stage_2_track_tiles_2[-1].tile_coordinates.y,dirt_path_track,"dirt_path_track")
         prior_track_option = track_option
         if(stage_2_waypoint_tiles_2[-1].tile_coordinates != stage_2_track_tiles_2[-1].tile_coordinates):
-            stage_2_waypoint_tiles_2.append(stage_2_waypoint_tiles_2[-1])
-            if(prior_track_option == 3 or prior_track_option == 4):
-                if(len(stage_2_waypoint_tiles_2) >= 2):
-                    stage_2_waypoint_tiles_2.remove(stage_2_waypoint_tiles_2[-2])
+            stage_2_waypoint_tiles_2.append(stage_2_track_tiles_2[-1])
     else:
         track_tile = Tile(stage_2_track_tiles_2[-1].tile_coordinates.x,stage_2_track_tiles_2[-1].tile_coordinates.y - tile_scaler,dirt_path_track,"dirt_path_track")
         prior_track_option = 0
@@ -361,7 +351,8 @@ stage_1_wave_template = [
     ["basic_plant_enemy" for i in range(5)],
     ["basic_plant_enemy" for i in range(5)],
     ["basic_tree_enemy" for i in range(5)],
-    ["basic_fly_enemy" for i in range(5)]
+    ["basic_fly_enemy" for i in range(5)],
+    ["basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_fly_enemy","basic_fly_enemy"]
 ]
 stage_1_enemy_list = []
 
