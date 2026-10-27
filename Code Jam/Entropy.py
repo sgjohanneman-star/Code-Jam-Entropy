@@ -380,8 +380,8 @@ stage_3_waypoint_tiles_2 = []
 stage_3_waypoint_tiles_3 = []
 
 columns_selected = []
-
-while len(columns_selected < 3):
+"""
+while len(columns_selected)<3:
     column_selected = random.randrange(0,screen.get_width(),tile_scaler)
     if(column_selected in columns_selected):
         pass
@@ -403,7 +403,7 @@ for y in range(0,screen.get_height(),tile_scaler):
     stage_3_track_tiles_3.append(Tile(columns_selected[2],y,dirt_path_track,"dirt_path_track"))
 stage_3_waypoint_tiles_3.append(stage_3_track_tiles_3[0])
 stage_3_waypoint_tiles_3.append(stage_3_track_tiles_3[-1])
-
+"""
 
 #Stage Enemies and Waves
 stage_1_wave_counter = 0
