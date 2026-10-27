@@ -1054,24 +1054,21 @@ while game_is_on:
                     if(len(stage_3_waves) > stage_3_wave_counter):
                         for enemy in stage_3_waves[stage_3_wave_counter]:
                             if not(stage_3_spawn_taken):
-                                if random.randint(0,1) == 1:
-                                    stage_3_enemy_list.append(
-                                        create_enemy(
-                                            enemy,
-                                            stage_3_waypoint_tiles_1,
-                                            0,
-                                            screen.get_height()//2
-                                        )
-                                    )
+                                lane = random.randint(1,3)
+                                if lane == 1:
+                                    track = stage_3_waypoint_tiles_1
+                                elif lane == 2:
+                                    track = stage_3_waypoint_tiles_2
                                 else:
-                                    stage_3_enemy_list.append(
-                                        create_enemy(
-                                            enemy,
-                                            stage_3_waypoint_tiles_2,
-                                            screen.get_width()//2,
-                                            screen.get_height()-tile_scaler
-                                        )
+                                    track = stage_3_waypoint_tiles_3
+                                stage_3_enemy_list.append(
+                                    create_enemy(
+                                        enemy,
+                                        track,
+                                        track[0].tile_coordinates.x,
+                                        track[0].tile_coordinates.y
                                     )
+                                )
                                 stage_3_waves[stage_3_wave_counter].remove(enemy)
                                 stage_3_spawn_taken = True
                 if(len(stage_3_enemy_list) == 0):
