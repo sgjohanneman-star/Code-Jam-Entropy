@@ -102,6 +102,8 @@ class Enemy(Tile):
             self.health = 5
         if(self.enemy_type == "basic_fly_enemy"):
             self.health = 1
+        if(self.enemy_type == "pump_king_enemy"):
+            self.health = 20
         self.waypoint_track = track
     def move_down_track(self):
         if(self.way_point_number + 1 == len(self.waypoint_track)):
@@ -109,9 +111,6 @@ class Enemy(Tile):
             return
         while((self.tile_coordinates.x - self.waypoint_track[self.way_point_number+1].tile_coordinates.x) == 0 and (self.tile_coordinates.y-self.waypoint_track[self.way_point_number+1].tile_coordinates.y) == 0):
             self.way_point_number += 1
-            if(self.way_point_number + 1 == len(self.waypoint_track)):
-                self.damage(player)
-                return
         move_vector = pygame.Vector2(((self.tile_coordinates.x - self.waypoint_track[self.way_point_number+1].tile_coordinates.x),(self.tile_coordinates.y-self.waypoint_track[self.way_point_number+1].tile_coordinates.y))).normalize() * tile_scaler
         self.tile_coordinates.x -= move_vector.x
         self.tile_coordinates.y -= move_vector.y
@@ -146,9 +145,25 @@ class Tower(Tile):
         self.tower_type = tower_type
     def attack(self,target:Enemy):
         if(self.tower_type == "small_wizard_tower"):
-            projectile_list.append(Projectile(self.tile_coordinates.x,self.tile_coordinates.y,wizard_projectile,"wizard",target))
+            projectile_list.append(
+                Projectile(
+                    self.tile_coordinates.x + 20 - wizard_projectile.get_width()//2,
+                    self.tile_coordinates.y + 20 - wizard_projectile.get_height()//2,
+                    wizard_projectile,
+                    "wizard",
+                    target
+                )
+            )
         if(self.tower_type == "small_mage_tower"):
-            projectile_list.append(Projectile(self.tile_coordinates.x,self.tile_coordinates.y,mage_projectile,"mage",target))
+            projectile_list.append(
+                Projectile(
+                    self.tile_coordinates.x + 20,
+                    self.tile_coordinates.y + 20,
+                    mage_projectile,
+                    "mage",
+                    target
+                )
+            )
 
 class Player:
     def __init__(self,health,currency):
@@ -164,52 +179,136 @@ class Projectile:
         self.projectile_stage = 0
         self.velocity = None
     def advance_projectile_stage(self):
+        if(self.target is not None and self.target.health <= 0):
+            available_targets = []
+            if(stage_1):
+                available_targets = stage_1_enemy_list
+            elif(stage_2):
+                available_targets = stage_2_enemy_list
+            elif(stage_3):
+                available_targets = stage_3_enemy_list
+            if(len(available_targets) > 0):
+                self.target = min(
+                    available_targets,
+                    key=lambda enemy:
+                        self.pos.distance_to(enemy.tile_coordinates)
+                )
+            else:
+                if(self in projectile_list):
+                    projectile_list.remove(self)
+                return
         if(self.projectile_type == "wizard"):
             self.projectile_stage += 1
-            self.velocity = (self.pos-self.target.tile_coordinates).normalize()*15
+            self.velocity = (
+                self.pos-self.target.tile_coordinates
+            ).normalize()*15
             self.pos -= self.velocity
             self.collision_check()
         elif(self.projectile_type == "mage"):
             if self.velocity is None:
-                self.velocity = (self.pos-self.target.tile_coordinates)//4
+                self.velocity = (
+                    self.pos-self.target.tile_coordinates
+                )//4
+
             self.pos -= self.velocity
             self.projectile_stage += 1
+
             if(self.projectile_stage == 4):
+
+                enemy_list = []
+
                 if(stage_1):
-                    for enemy in stage_1_enemy_list:
-                        if(enemy.rect.colliderect(pygame.Rect(self.pos.x-100,self.pos.y-100,240,240))):
-                            enemy.take_damage(4)
-                if(stage_2):
-                    for enemy in stage_2_enemy_list:
-                        if(enemy.rect.colliderect(pygame.Rect(self.pos.x-100,self.pos.y-100,240,240))):
-                            enemy.take_damage(4)
-                if(stage_3):
-                    for enemy in stage_3_enemy_list:
-                        if(enemy.rect.colliderect(pygame.Rect(self.pos.x-100,self.pos.y-100,240,240))):
-                            enemy.take_damage(4)
-                projectile_list.remove(self)
-                explosion = Projectile(self.pos.x - 100, self.pos.y - 100, mage_explosion,"mage_explosion",None)
-                projectile_list.append(explosion)
+                    enemy_list = stage_1_enemy_list
+                elif(stage_2):
+                    enemy_list = stage_2_enemy_list
+                elif(stage_3):
+                    enemy_list = stage_3_enemy_list
+
+                for enemy in enemy_list:
+                    if enemy.rect.colliderect(
+                        pygame.Rect(
+                            self.pos.x-100,
+                            self.pos.y-100,
+                            240,
+                            240
+                        )
+                    ):
+                        enemy.take_damage(4)
+
+                if(self in projectile_list):
+                    projectile_list.remove(self)
+
+                projectile_list.append(
+                    Projectile(
+                        self.pos.x-100,
+                        self.pos.y-100,
+                        mage_explosion,
+                        "mage_explosion",
+                        None
+                    )
+                )
         elif(self.projectile_type == "mage_explosion"):
             self.projectile_stage += 1
-            if self.projectile_stage == 5:
-                projectile_list.remove(self)
+            if(self.projectile_stage == 5):
+                if(self in projectile_list):
+                    projectile_list.remove(self)
 
     def collision_check(self):
         if(self.target.rect.collidepoint((self.pos.x+20,self.pos.y+20)) and self.projectile_type == "wizard" and self.target.health > 0):
-            projectile_list.remove(self)
+            if(self in projectile_list):
+                projectile_list.remove(self)
             self.target.take_damage(1)
             player.currency += 1
-        elif(self.target.health <= 0):
-            projectile_list.remove(self)
 
+def create_enemy(enemy_type, track, x, y):
+
+    if enemy_type == "basic_plant_enemy":
+        return Enemy(
+            x,
+            y,
+            basic_plant_enemy,
+            "basic_plant_enemy",
+            track
+        )
+
+    elif enemy_type == "basic_tree_enemy":
+        return Enemy(
+            x,
+            y,
+            basic_tree_enemy,
+            "basic_tree_enemy",
+            track
+        )
+
+    elif enemy_type == "basic_fly_enemy":
+        return Enemy(
+            x,
+            y,
+            basic_fly_enemy,
+            "basic_fly_enemy",
+            track
+        )
+    elif enemy_type == "pump_king_enemy":
+        return Enemy(
+            x,
+            y,
+            pump_king_enemy,
+            "pump_king_enemy",
+            track
+        )
+    return None
 #Setup
 pygame.init()
 screen = pygame.display.set_mode((1280,720))
 clock = pygame.time.Clock()
 game_is_on = True
 frame = 0
-player = Player(health=50,currency=350)
+STARTING_HEALTH = 50
+STARTING_CASH = 150
+player = Player(
+    health=STARTING_HEALTH,
+    currency=STARTING_CASH
+)
 font = pygame.font.SysFont("helvetica", 32)
 
 #Background Tile Art Loading
@@ -232,6 +331,7 @@ entropy_name_plate = pygame.image.load("Code Jam/entropy_name_plate.png").conver
 select_1 = pygame.image.load("Code Jam/select_1.png").convert_alpha()
 select_2 = pygame.image.load("Code Jam/select_2.png").convert_alpha()
 select_3 = pygame.image.load("Code Jam/select_3.png").convert_alpha()
+level_select_plate = pygame.image.load("Code Jam/level_select_plate.png")
 
 #Stage menu and UI
 bottom_bar_image = pygame.image.load("Code Jam/bottom_bar.png").convert_alpha()
@@ -242,7 +342,6 @@ basic_plant_enemy = pygame.image.load("Code Jam/basic_plant_enemy.png").convert_
 basic_tree_enemy = pygame.image.load("Code Jam/basic_tree_enemy.png").convert_alpha()
 basic_fly_enemy = pygame.image.load("Code Jam/basic_fly_enemy.png").convert_alpha()
 pump_king_enemy = pygame.image.load("Code Jam/pump_king_enemy.png").convert_alpha()
-
 #Tower Art Loading
 small_wizard_tower = pygame.image.load("Code Jam/small_wizard_tower.png").convert_alpha()
 small_mage_tower = pygame.image.load("Code Jam/small_mage_tower.png").convert_alpha()
@@ -251,7 +350,6 @@ small_mage_tower = pygame.image.load("Code Jam/small_mage_tower.png").convert_al
 wizard_projectile = pygame.image.load("Code Jam/wizard_projectile.png").convert_alpha()
 mage_projectile = pygame.image.load("Code Jam/mage_projectile.png").convert_alpha()
 mage_explosion = pygame.image.load("Code Jam/mage_explosion.png").convert_alpha()
-
 #Heart and Star Flowers
 heart = pygame.transform.scale(pygame.image.load("Code Jam/heart.png").convert_alpha(),(40,40))
 star_flower = pygame.transform.scale(pygame.image.load("Code Jam/star_flower.png").convert_alpha(),(50,50))
@@ -372,38 +470,60 @@ while stage_2_track_tiles_2[-1].tile_coordinates.y > 0:
 stage_2_waypoint_tiles_2.append(track_tile)
 
 #Stage 3 Tile Creation
+
 stage_3_track_tiles_1 = []
 stage_3_track_tiles_2 = []
 stage_3_track_tiles_3 = []
 stage_3_waypoint_tiles_1 = []
 stage_3_waypoint_tiles_2 = []
 stage_3_waypoint_tiles_3 = []
-
 columns_selected = []
-"""
-while len(columns_selected)<3:
-    column_selected = random.randrange(0,screen.get_width(),tile_scaler)
-    if(column_selected in columns_selected):
-        pass
-    else:
-        columns_selected.append(column_selected)
 
-#First Column
+while len(columns_selected)<3:
+    column_selected = random.randrange(
+        0,
+        screen.get_width(),
+        tile_scaler
+    )
+
+    if(column_selected not in columns_selected):
+        columns_selected.append(column_selected)
 for y in range(0,screen.get_height(),tile_scaler):
-    stage_3_track_tiles_1.append(Tile(columns_selected[0],y,dirt_path_track,"dirt_path_track"))
+    stage_3_track_tiles_1.append(
+        Tile(
+            columns_selected[0],
+            y,
+            dirt_path_track,
+            "dirt_path_track"
+        )
+    )
+
 stage_3_waypoint_tiles_1.append(stage_3_track_tiles_1[0])
 stage_3_waypoint_tiles_1.append(stage_3_track_tiles_1[-1])
-#Second Column
+
 for y in range(0,screen.get_height(),tile_scaler):
-    stage_3_track_tiles_1.append(Tile(columns_selected[1],y,dirt_path_track,"dirt_path_track"))
+    stage_3_track_tiles_2.append(
+        Tile(
+            columns_selected[1],
+            y,
+            dirt_path_track,
+            "dirt_path_track"
+        )
+    )
 stage_3_waypoint_tiles_2.append(stage_3_track_tiles_2[0])
 stage_3_waypoint_tiles_2.append(stage_3_track_tiles_2[-1])
-#Third Column
 for y in range(0,screen.get_height(),tile_scaler):
-    stage_3_track_tiles_3.append(Tile(columns_selected[2],y,dirt_path_track,"dirt_path_track"))
+    stage_3_track_tiles_3.append(
+        Tile(
+            columns_selected[2],
+            y,
+            dirt_path_track,
+            "dirt_path_track"
+        )
+    )
 stage_3_waypoint_tiles_3.append(stage_3_track_tiles_3[0])
 stage_3_waypoint_tiles_3.append(stage_3_track_tiles_3[-1])
-"""
+
 
 #Stage Enemies and Waves
 stage_1_wave_counter = 0
@@ -421,7 +541,7 @@ stage_1_wave_template = [
     ["basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy"],
     ["basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy"],
     ["basic_fly_enemy" for i in range(20)],
-    ["basic_tree_enemy"] #Consider adding stage 1 boss, like mastuh pumpking
+    ["pump_king_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy"]
 ]
 stage_1_enemy_list = []
 
@@ -430,14 +550,34 @@ stage_2_wave_counter = 0
 stage_2_wave_spawning = True
 stage_2_spawn_taken = False
 stage_2_wave_template = [
-    ["basic_plant_enemy" for i in range(5)]
+    ["basic_plant_enemy" for i in range(5)],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_fly_enemy","basic_fly_enemy","basic_plant_enemy"],
+    ["basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_tree_enemy","basic_tree_enemy"],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy"],
+    ["pump_king_enemy","basic_plant_enemy","basic_plant_enemy"],
+    ["basic_plant_enemy" for i in range(15)],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy"],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy"],
+    ["basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy"],
+    ["pump_king_enemy","pump_king_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy"],
 ]
 stage_2_enemy_list = []
 
 stage_3_wave_counter = 0
 stage_3_wave_spawning = True
 stage_3_spawn_taken = False
-stage_3_wave_template = []
+stage_3_wave_template = [
+    ["basic_plant_enemy" for i in range(6)],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_plant_enemy"],
+    ["basic_fly_enemy" for i in range(9)],
+    ["basic_tree_enemy","basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy"],
+    ["pump_king_enemy","pump_king_enemy"],
+    ["basic_tree_enemy","basic_tree_enemy","basic_tree_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy","basic_fly_enemy"],
+    ["basic_plant_enemy"],
+    ["basic_tree_enemy" for i in range(12)],
+    ["basic_plant_enemy" for i in range(30)],
+    ["pump_king_enemy","basic_tree_enemy","pump_king_enemy","basic_tree_enemy","pump_king_enemy","basic_tree_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy","basic_plant_enemy"]
+]
 stage_3_waves = []
 stage_3_enemy_list = []
 
@@ -451,6 +591,7 @@ game_entropy_name_plate = UIElement(screen.get_width()//2-560//2,screen.get_heig
 game_select_1 = UIElement(screen.get_width()//2-400,screen.get_height()//2-100,200,200,select_1,"select_1")
 game_select_2 = UIElement(screen.get_width()//2-100,screen.get_height()//2-100,200,200,select_2,"select_2")
 game_select_3 = UIElement(screen.get_width()//2+200,screen.get_height()//2-100,200,200,select_3,"select_3")
+game_level_select_plate = UIElement(screen.get_width()//2-400//2,screen.get_height()//24,400,200,level_select_plate,"level_select_plate")
 
 game_bottom_bar = SlidingPanel(
     screen.get_width()//2 - bottom_bar_image.get_width()//2,
@@ -477,8 +618,8 @@ wizard_tower_rect = pygame.Rect(
 mage_tower_rect = pygame.Rect(
     0,
     0,
-    small_wizard_tower.get_width(),
-    small_wizard_tower.get_height()
+    small_mage_tower.get_width(),
+    small_mage_tower.get_height()
 )
 
 #random test region
@@ -502,7 +643,11 @@ while game_is_on:
                 if(game_select_1.rect.collidepoint(pygame.mouse.get_pos())):
                     select_screen = False
                     stage_1 = True
-
+                    player.health = STARTING_HEALTH
+                    player.currency = STARTING_CASH
+                    stage_1_wave_spawning = True
+                    stage_1_spawn_taken = False
+                    stage_1_wave_counter = 0
                     stage_1_waves = [
                         wave.copy()
                         for wave in stage_1_wave_template
@@ -510,6 +655,11 @@ while game_is_on:
                 if(game_select_2.rect.collidepoint(pygame.mouse.get_pos()) and stage_1_complete):
                     select_screen = False
                     stage_2 = True
+                    player.health = STARTING_HEALTH
+                    player.currency = STARTING_CASH + 100
+                    stage_2_wave_spawning = True
+                    stage_2_spawn_taken = False
+                    stage_2_wave_counter = 0
                     stage_2_waves = [
                         wave.copy()
                         for wave in stage_2_wave_template
@@ -517,6 +667,11 @@ while game_is_on:
                 if(game_select_3.rect.collidepoint(pygame.mouse.get_pos()) and stage_2_complete):
                     select_screen = False
                     stage_3 = True
+                    player.health = STARTING_HEALTH
+                    player.currency = STARTING_CASH + 200
+                    stage_3_wave_spawning = True
+                    stage_3_spawn_taken = False
+                    stage_3_wave_counter = 0
                     stage_3_waves = [
                         wave.copy()
                         for wave in stage_3_wave_template
@@ -533,7 +688,7 @@ while game_is_on:
                             small_wizard_tower,
                             "small_wizard_tower"
                         )
-                if(mage_tower_rect.collidepoint(pygame.mouse.get_pos())):
+                elif(mage_tower_rect.collidepoint(pygame.mouse.get_pos())):
                     if(selected_tower == None and player.currency >= 200):
                         selected_tower = Tower(
                             0,
@@ -547,6 +702,12 @@ while game_is_on:
                         track_check_list = stage_1_track_tiles
                     elif(stage_2):
                         track_check_list = stage_2_track_tiles_1 + stage_2_track_tiles_2
+                    elif(stage_3):
+                        track_check_list = (
+                            stage_3_track_tiles_1
+                            + stage_3_track_tiles_2
+                            + stage_3_track_tiles_3
+                        )
                     valid = True
                     for tile in track_check_list:
                         if tile.rect.colliderect(selected_tower.rect):
@@ -555,7 +716,9 @@ while game_is_on:
                         placed_towers.append(selected_tower)
                         selected_tower = None
                         player.currency -= 100
-                    elif(valid and selected_tower.tower_type == "small_mage_tower" and player.currency >= 200):
+                    elif(valid and
+                        selected_tower.tower_type == "small_mage_tower"
+                        and player.currency >= 200):
                         placed_towers.append(selected_tower)
                         selected_tower = None
                         player.currency -= 200
@@ -581,6 +744,7 @@ while game_is_on:
 
     if select_screen:
         screen.blit(game_select_1.image,(game_select_1.ui_coordinates))
+        screen.blit(game_level_select_plate.image,(game_level_select_plate.ui_coordinates))
         if not(stage_1_complete):
             screen.blit(pygame.transform.grayscale(game_select_2.image),(game_select_2.ui_coordinates))
         else:
@@ -600,45 +764,21 @@ while game_is_on:
             if(len(stage_1_waves) > stage_1_wave_counter):
                 for enemy in stage_1_waves[stage_1_wave_counter]:
                     if not(stage_1_spawn_taken):
-                        if enemy == "basic_plant_enemy":
-                            stage_1_enemy_list.append(
-                                Enemy(
-                                    0,
-                                    screen.get_height()//2,
-                                    basic_plant_enemy,
-                                    "basic_plant_enemy",
-                                    waypoint_tiles
-                                )
+                        stage_1_enemy_list.append(
+                            create_enemy(
+                                enemy,
+                                waypoint_tiles,
+                                0,
+                                screen.get_height()//2
                             )
-
-                        if enemy == "basic_tree_enemy":
-                            stage_1_enemy_list.append(
-                                Enemy(
-                                    0,
-                                    screen.get_height()//2,
-                                    basic_tree_enemy,
-                                    "basic_tree_enemy",
-                                    waypoint_tiles
-                                )
-                            )
-
-                        if enemy == "basic_fly_enemy":
-                            stage_1_enemy_list.append(
-                                Enemy(
-                                    0,
-                                    screen.get_height()//2,
-                                    basic_fly_enemy,
-                                    "basic_fly_enemy",
-                                    waypoint_tiles
-                                )
-                            )
+                        )
                         stage_1_waves[stage_1_wave_counter].remove(enemy)
                         stage_1_spawn_taken = True
         if(len(stage_1_enemy_list) == 0):
             stage_1_wave_spawning = True
             if(len(stage_1_waves) > stage_1_wave_counter):
                 stage_1_wave_counter += 1
-                player.currency += 25 + (stage_1_wave_counter//5)*25
+                player.currency += 25
             else:
                 stage_1_complete = True
                 stage_1 = False
@@ -647,12 +787,23 @@ while game_is_on:
                 stage_1_enemy_list.clear()
                 placed_towers.clear()
                 selected_tower = None
-                player.health = 50
-                player.currency = 250
+                player.health = STARTING_HEALTH
+                player.currency = STARTING_CASH
                 stage_1_wave_counter = 0
                 stage_1_spawn_taken = False
                 projectile_list.clear()
-
+        if(player.health <= 0):
+            stage_1 = False
+            select_screen = True
+            stage_1_wave_spawning = False
+            stage_1_enemy_list.clear()
+            placed_towers.clear()
+            selected_tower = None
+            player.health = STARTING_HEALTH
+            player.currency = STARTING_CASH
+            stage_1_wave_counter = 0
+            stage_1_spawn_taken = False
+            projectile_list.clear()
         if(selected_tower != None):
             mouse_x, mouse_y = pygame.mouse.get_pos()
 
@@ -688,9 +839,13 @@ while game_is_on:
             for enemy in stage_1_enemy_list:
                 if(enemy.enemy_type == "basic_fly_enemy"):
                     enemy.move_down_track()
-        
-        if(all(stage_1_enemy_list[i].tile_coordinates.x > 0 for i in range(0,len(stage_1_enemy_list)))):
-            stage_1_spawn_taken = False
+        if(frame % 50 == 0):
+            for enemy in stage_1_enemy_list:        
+                if(enemy.enemy_type == "pump_king_enemy"):
+                    enemy.move_down_track()
+        if not(stage_1_enemy_list is None):
+            if(all(stage_1_enemy_list[i].tile_coordinates.x > 0 for i in range(0,len(stage_1_enemy_list)))):
+                stage_1_spawn_taken = False
 
         for enemy in stage_1_enemy_list:
             screen.blit(enemy.image,(enemy.tile_coordinates))
@@ -701,9 +856,10 @@ while game_is_on:
             )
             if(frame % 60 == 0 and tower.tower_type == "small_wizard_tower" and len(stage_1_enemy_list) > 0):
                 tower.attack(stage_1_enemy_list[0])
-            if(frame % 260 == 0 and tower.tower_type == "small_mage_tower" and len(stage_1_enemy_list) > 0):
-                tower.attack(stage_1_enemy_list[0])
-
+            if(frame % 260 == 0 and
+                tower.tower_type == "small_mage_tower" and
+                len(stage_1_enemy_list) > 0):
+                    tower.attack(stage_1_enemy_list[0])
         for projectile in projectile_list:
             if(frame % 3 == 0 and projectile.projectile_type == "wizard"):
                 projectile.advance_projectile_stage()
@@ -724,13 +880,38 @@ while game_is_on:
             screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
             screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
             screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
-
-            mage_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4
-            mage_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
-            screen.blit(small_mage_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2))
-            screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*5.5,game_bottom_bar.y+game_bottom_bar.height//2+35))
-            screen.blit(font.render("200",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2+43))
-        
+            mage_tower_rect.x = (
+                game_bottom_bar.x
+                + game_bottom_bar.width//2
+                - tile_scaler*4
+            )
+            mage_tower_rect.y = (
+                game_bottom_bar.y
+                + game_bottom_bar.height//2
+            )
+            screen.blit(
+                small_mage_tower,
+                (
+                    game_bottom_bar.x
+                    + game_bottom_bar.width//2
+                    - tile_scaler*4,
+                    game_bottom_bar.y
+                    + game_bottom_bar.height//2
+                )
+            )
+            screen.blit(star_flower,
+                (
+                    game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*5.5,
+                    game_bottom_bar.y+game_bottom_bar.height//2+35
+                )
+            )
+            screen.blit(
+                font.render("200",True,(255,255,255)),
+                (
+                    game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,
+                    game_bottom_bar.y+game_bottom_bar.height//2+43
+                )
+            )
         upgrade_panel.update()
 
         screen.blit(
@@ -748,27 +929,24 @@ while game_is_on:
                 if(len(stage_2_waves) > stage_2_wave_counter):
                     for enemy in stage_2_waves[stage_2_wave_counter]:
                         if not(stage_2_spawn_taken):
-                            if enemy == "basic_plant_enemy":
-                                if random.randint(0,1) == 1:
-                                    stage_2_enemy_list.append(
-                                        Enemy(
-                                            0,
-                                            screen.get_height()//2,
-                                            basic_plant_enemy,
-                                            "basic_plant_enemy",
-                                            stage_2_waypoint_tiles_1
-                                        )
+                            if random.randint(0,1) == 1:
+                                stage_2_enemy_list.append(
+                                    create_enemy(
+                                        enemy,
+                                        stage_2_waypoint_tiles_1,
+                                        0,
+                                        screen.get_height()//2
                                     )
-                                else:
-                                    stage_2_enemy_list.append(
-                                        Enemy(
-                                            screen.get_width()//2,
-                                            screen.get_height()-tile_scaler,
-                                            basic_plant_enemy,
-                                            "basic_plant_enemy",
-                                            stage_2_waypoint_tiles_2
-                                        )
+                                )
+                            else:
+                                stage_2_enemy_list.append(
+                                    create_enemy(
+                                        enemy,
+                                        stage_2_waypoint_tiles_2,
+                                        screen.get_width()//2,
+                                        screen.get_height()-tile_scaler
                                     )
+                                )
                             stage_2_waves[stage_2_wave_counter].remove(enemy)
                             stage_2_spawn_taken = True
             if(len(stage_2_enemy_list) == 0):
@@ -780,15 +958,27 @@ while game_is_on:
                     stage_2_complete = True
                     stage_2 = False
                     select_screen = True
-                    player.health = 50
-                    player.currency = 250
+                    player.health = STARTING_HEALTH
+                    player.currency = STARTING_CASH
                     stage_2_wave_counter = 0
                     stage_2_spawn_taken = False
                     stage_2_wave_spawning = False
                     placed_towers.clear()
+                    stage_2_enemy_list.clear()
                     selected_tower = None
                     projectile_list.clear()
-    
+            if(player.health <= 0):
+                stage_2 = False
+                select_screen = True
+                player.health = STARTING_HEALTH
+                player.currency = STARTING_CASH
+                stage_2_wave_counter = 0
+                stage_2_spawn_taken = False
+                stage_2_wave_spawning = False
+                placed_towers.clear()
+                stage_2_enemy_list.clear()
+                selected_tower = None
+                projectile_list.clear()
             if(selected_tower != None):
                 mouse_x, mouse_y = pygame.mouse.get_pos()
     
@@ -824,9 +1014,13 @@ while game_is_on:
                 for enemy in stage_2_enemy_list:
                     if(enemy.enemy_type == "basic_fly_enemy"):
                         enemy.move_down_track()
-            
-            if(all(stage_2_enemy_list[i].tile_coordinates.x > 0 for i in range(0,len(stage_2_enemy_list)))):
-                stage_2_spawn_taken = False
+            if(frame % 50 == 0):
+                for enemy in stage_2_enemy_list:        
+                    if(enemy.enemy_type == "pump_king_enemy"):
+                        enemy.move_down_track()
+            if not(stage_2_enemy_list is None):
+                if(all(stage_2_enemy_list[i].tile_coordinates.x > 0 for i in range(0,len(stage_2_enemy_list)))):
+                    stage_2_spawn_taken = False
     
             for enemy in stage_2_enemy_list:
                 screen.blit(enemy.image,(enemy.tile_coordinates))
@@ -837,8 +1031,10 @@ while game_is_on:
                 )
                 if(frame % 60 == 0 and tower.tower_type == "small_wizard_tower" and len(stage_2_enemy_list) > 0):
                     tower.attack(stage_2_enemy_list[0])
-                if(frame % 260 == 0 and tower.tower_type == "small_mage_tower" and len(stage_2_enemy_list) > 0):
-                    tower.attack(stage_2_enemy_list[0])
+                if(frame % 260 == 0 and
+                    tower.tower_type == "small_mage_tower" and
+                    len(stage_2_enemy_list) > 0):
+                        tower.attack(stage_2_enemy_list[0])
     
             for projectile in projectile_list:
                 if(frame % 3 == 0 and projectile.projectile_type == "wizard"):
@@ -847,7 +1043,6 @@ while game_is_on:
                     projectile.advance_projectile_stage()
                 elif(frame % 10 == 0 and projectile.projectile_type == "mage_explosion"):
                     projectile.advance_projectile_stage()
-                
                 screen.blit(projectile.image,projectile.pos)
     
             game_bottom_bar.update()
@@ -856,24 +1051,224 @@ while game_is_on:
                 (game_bottom_bar.x,game_bottom_bar.y)
             )
             if(game_bottom_bar.open):
-                wizard_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2
-                wizard_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
-                screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
-                screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
-                screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
-
-                mage_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4
-                mage_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
-                screen.blit(small_mage_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2))
-                screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*5.5,game_bottom_bar.y+game_bottom_bar.height//2+35))
-                screen.blit(font.render("200",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,game_bottom_bar.y+game_bottom_bar.height//2+43))
-            
+                        wizard_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2
+                        wizard_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
+                        screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
+                        screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
+                        screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
+                        mage_tower_rect.x = (
+                            game_bottom_bar.x
+                            + game_bottom_bar.width//2
+                            - tile_scaler*4
+                        )
+                        mage_tower_rect.y = (
+                            game_bottom_bar.y
+                            + game_bottom_bar.height//2
+                        )
+                        screen.blit(
+                            small_mage_tower,
+                            (
+                                game_bottom_bar.x
+                                + game_bottom_bar.width//2
+                                - tile_scaler*4,
+                                game_bottom_bar.y
+                                + game_bottom_bar.height//2
+                            )
+                        )
+                        screen.blit(star_flower,
+                            (
+                                game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*5.5,
+                                game_bottom_bar.y+game_bottom_bar.height//2+35
+                            )
+                        )
+                        screen.blit(
+                            font.render("200",True,(255,255,255)),
+                            (
+                                game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,
+                                game_bottom_bar.y+game_bottom_bar.height//2+43
+                            )
+                        )
             upgrade_panel.update()
     
             screen.blit(
                 upgrade_panel.image,
                 (upgrade_panel.x,upgrade_panel.y)
             )
+
+    if(stage_3):
+                for tile in stage_3_track_tiles_1:
+                    screen.blit(tile.image,(tile.tile_coordinates))
+                for tile in stage_3_track_tiles_2:
+                    screen.blit(tile.image,(tile.tile_coordinates))
+                for tile in stage_3_track_tiles_3:
+                                    screen.blit(tile.image,(tile.tile_coordinates))
+        
+                if(stage_3_wave_spawning):
+                    if(len(stage_3_waves) > stage_3_wave_counter):
+                        for enemy in stage_3_waves[stage_3_wave_counter]:
+                            if not(stage_3_spawn_taken):
+                                lane = random.randint(1,3)
+                                if lane == 1:
+                                    track = stage_3_waypoint_tiles_1
+                                elif lane == 2:
+                                    track = stage_3_waypoint_tiles_2
+                                else:
+                                    track = stage_3_waypoint_tiles_3
+                                stage_3_enemy_list.append(
+                                    create_enemy(
+                                        enemy,
+                                        track,
+                                        track[0].tile_coordinates.x,
+                                        track[0].tile_coordinates.y
+                                    )
+                                )
+                                stage_3_waves[stage_3_wave_counter].remove(enemy)
+                                stage_3_spawn_taken = True
+                if(len(stage_3_enemy_list) == 0):
+                    stage_3_wave_spawning = True
+                    if(len(stage_3_waves) > stage_3_wave_counter):
+                        stage_3_wave_counter += 1
+                        player.currency += 25
+                    else:
+                        stage_3_complete = True
+                        stage_3 = False
+                        select_screen = True
+                        player.health = STARTING_HEALTH
+                        player.currency = STARTING_CASH
+                        stage_3_wave_counter = 0
+                        stage_3_spawn_taken = False
+                        stage_3_wave_spawning = False
+                        placed_towers.clear()
+                        stage_3_enemy_list.clear()
+                        selected_tower = None
+                        projectile_list.clear()
+                if(player.health <= 0):
+                    stage_3 = False
+                    select_screen = True
+                    player.health = STARTING_HEALTH
+                    player.currency = STARTING_CASH
+                    stage_3_wave_counter = 0
+                    stage_3_spawn_taken = False
+                    stage_3_wave_spawning = False
+                    placed_towers.clear()
+                    stage_3_enemy_list.clear()
+                    selected_tower = None
+                    projectile_list.clear()
+                if(selected_tower != None):
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+        
+                    grid_x = (mouse_x // tile_scaler) * tile_scaler
+                    grid_y = (mouse_y // tile_scaler) * tile_scaler
+        
+                    selected_tower.tile_coordinates.x = grid_x
+                    selected_tower.tile_coordinates.y = grid_y
+                    selected_tower.rect.x = grid_x
+                    selected_tower.rect.y = grid_y
+        
+        
+                    screen.blit(
+                        selected_tower.image,
+                        selected_tower.tile_coordinates
+                    )
+                    
+                screen.blit(heart,(20,20))
+                screen.blit(font.render(f"{player.health}",True,(255,255,255)),(70,20))
+                screen.blit(star_flower,(100,15))
+                screen.blit(font.render(f"{player.currency}",True,(255,255,255)),(150,20))
+        
+                if(frame % 20 == 0):
+                    for enemy in stage_3_enemy_list:
+                        if(enemy.enemy_type == "basic_plant_enemy"):
+                            enemy.move_down_track()
+                            
+                if(frame % 30 == 0):
+                    for enemy in stage_3_enemy_list:
+                        if(enemy.enemy_type == "basic_tree_enemy"):
+                            enemy.move_down_track()
+                if(frame % 15 == 0):
+                    for enemy in stage_3_enemy_list:
+                        if(enemy.enemy_type == "basic_fly_enemy"):
+                            enemy.move_down_track()
+                if(frame % 50 == 0):
+                    for enemy in stage_3_enemy_list:        
+                        if(enemy.enemy_type == "pump_king_enemy"):
+                            enemy.move_down_track()
+                if not(stage_3_enemy_list is None):
+                    if(all(stage_3_enemy_list[i].tile_coordinates.x > 0 for i in range(0,len(stage_3_enemy_list)))):
+                        stage_3_spawn_taken = False
+        
+                for enemy in stage_3_enemy_list:
+                    screen.blit(enemy.image,(enemy.tile_coordinates))
+                for tower in placed_towers:
+                    screen.blit(
+                        tower.image,
+                        tower.tile_coordinates
+                    )
+                    if(frame % 60 == 0 and tower.tower_type == "small_wizard_tower" and len(stage_3_enemy_list) > 0):
+                        tower.attack(stage_3_enemy_list[0])
+                    if(frame % 260 == 0 and
+                        tower.tower_type == "small_mage_tower" and
+                        len(stage_3_enemy_list) > 0):
+                            tower.attack(stage_3_enemy_list[0])
+        
+                for projectile in projectile_list:
+                    if(frame % 3 == 0 and projectile.projectile_type == "wizard"):
+                        projectile.advance_projectile_stage()
+                    elif(frame % 6 == 0 and projectile.projectile_type == "mage"):
+                        projectile.advance_projectile_stage()
+                    elif(frame % 10 == 0 and projectile.projectile_type == "mage_explosion"):
+                        projectile.advance_projectile_stage()
+                    screen.blit(projectile.image,projectile.pos)
+        
+                game_bottom_bar.update()
+                screen.blit(
+                    game_bottom_bar.image,
+                    (game_bottom_bar.x,game_bottom_bar.y)
+                )
+                if(game_bottom_bar.open):
+                            wizard_tower_rect.x = game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2
+                            wizard_tower_rect.y = game_bottom_bar.y+game_bottom_bar.height//2
+                            screen.blit(small_wizard_tower,(game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler//2,game_bottom_bar.y+game_bottom_bar.height//2))
+                            screen.blit(star_flower,(game_bottom_bar.x+game_bottom_bar.width//2-60,game_bottom_bar.y+game_bottom_bar.height//2+35))
+                            screen.blit(font.render("100",True,(255,255,255)),(game_bottom_bar.x+game_bottom_bar.width//2-8,game_bottom_bar.y+game_bottom_bar.height//2+43))
+                            mage_tower_rect.x = (
+                                game_bottom_bar.x
+                                + game_bottom_bar.width//2
+                                - tile_scaler*4
+                            )
+                            mage_tower_rect.y = (
+                                game_bottom_bar.y
+                                + game_bottom_bar.height//2
+                            )
+                            screen.blit(
+                                small_mage_tower,
+                                (
+                                    game_bottom_bar.x
+                                    + game_bottom_bar.width//2
+                                    - tile_scaler*4,
+                                    game_bottom_bar.y
+                                    + game_bottom_bar.height//2
+                                )
+                            )
+                            screen.blit(star_flower,
+                                (
+                                    game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*5.5,
+                                    game_bottom_bar.y+game_bottom_bar.height//2+35
+                                )
+                            )
+                            screen.blit(
+                                font.render("200",True,(255,255,255)),
+                                (
+                                    game_bottom_bar.x+game_bottom_bar.width//2-tile_scaler*4,
+                                    game_bottom_bar.y+game_bottom_bar.height//2+43
+                                )
+                            )
+                upgrade_panel.update()
+        
+                screen.blit(
+                    upgrade_panel.image,
+                    (upgrade_panel.x,upgrade_panel.y)
+                )    
 
 
     pygame.display.flip()

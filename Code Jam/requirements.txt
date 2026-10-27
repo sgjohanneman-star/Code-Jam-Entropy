@@ -1,2 +1,1 @@
-pygame-ce
-random
+pygame-ce=2.5.8
