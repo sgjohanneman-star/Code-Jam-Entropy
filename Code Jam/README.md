@@ -11,7 +11,7 @@ This project relates to the given theme of "A New Twist" through its hand-drawn 
 
 Ensure python and pip are installed on your computer
 
-`pip install requirements.txt`
+`pip install -r requirements.txt`
 
 If this doesn't work
 
