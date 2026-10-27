@@ -241,6 +241,7 @@ upgrade_panel_image = pygame.image.load("Code Jam/upgrade_panel.png").convert_al
 basic_plant_enemy = pygame.image.load("Code Jam/basic_plant_enemy.png").convert_alpha()
 basic_tree_enemy = pygame.image.load("Code Jam/basic_tree_enemy.png").convert_alpha()
 basic_fly_enemy = pygame.image.load("Code Jam/basic_fly_enemy.png").convert_alpha()
+pump_king_enemy = pygame.image.load("Code Jam/pump_king_enemy.png").convert_alpha()
 
 #Tower Art Loading
 small_wizard_tower = pygame.image.load("Code Jam/small_wizard_tower.png").convert_alpha()
